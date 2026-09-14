@@ -22,6 +22,14 @@ Only the repository and product identity are established by this initialization.
 - Deterministic Verification API
 - Run / Evidence / Timeline query
 
+### First verified Run milestone
+
+A developer unfamiliar with Proovex must be able to complete a first verified Run in minutes: clone/install → start → ingest one Run → inspect Evidence → verify an assertion.
+
+This milestone requires real commands, a runnable example, independently observed effects, and deterministic Verification outcomes for a matching assertion, a mismatch, and missing Evidence. Record the actual prerequisites, steps, and time during a fresh-user walkthrough; do not claim the experience is ready before it works.
+
+Once a real MVP supports this path, both READMEs must replace the product-only introduction with the tested Quick Start. Until then, no install command, SDK, CLI, or API availability is implied.
+
 ## Phase 2 — Pluggable Collection
 
 - MCP Collector

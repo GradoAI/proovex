@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="480" viewBox="0 0 1280 480" role="img" aria-labelledby="title desc">
+<title id="title">Proovex — Prove what your agents actually did.</title>
+<desc id="desc">A dark sunrise illuminates the product's intended flow: Agent Action to Evidence to Verification to Trusted Outcome.</desc>
+<defs>
+ <radialGradient id="dawn" cx="50%" cy="105%" r="83%"><stop stop-color="#ffc99c"/><stop offset=".12" stop-color="#b75e53"/><stop offset=".38" stop-color="#302945"/><stop offset=".7" stop-color="#101624"/><stop offset="1" stop-color="#080c15"/></radialGradient>
+ <linearGradient id="line"><stop stop-color="#7ba6df"/><stop offset=".52" stop-color="#d6a4ee"/><stop offset="1" stop-color="#ffd1a3"/></linearGradient>
+ <linearGradient id="card" x2="0" y2="1"><stop stop-color="#202437"/><stop offset="1" stop-color="#101725"/></linearGradient>
+ <radialGradient id="halo"><stop stop-color="#ffdbb5" stop-opacity=".7"/><stop offset="1" stop-color="#ffbc98" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="1280" height="480" rx="24" fill="url(#dawn)"/>
+<g fill="#d0d5e9" opacity=".28"><circle cx="80" cy="80" r="1"/><circle cx="1160" cy="80" r="1"/><circle cx="1010" cy="143" r="1"/><circle cx="220" cy="170" r="1"/><circle cx="915" cy="55" r="1"/><circle cx="405" cy="38" r="1"/></g>
+<ellipse cx="640" cy="475" rx="510" ry="125" fill="url(#halo)"/>
+<ellipse cx="640" cy="693" rx="710" ry="268" fill="#090e19" stroke="#e6b5a0" stroke-opacity=".55" stroke-width="1.5"/>
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif" text-anchor="middle">
+ <text x="640" y="67" fill="#b6c0d2" font-size="13" letter-spacing="4">EVIDENCE RUNTIME FOR AI AGENTS</text>
+ <text x="640" y="146" fill="#faf5f0" font-size="68" font-weight="650" letter-spacing="-2">Proovex</text>
+ <text x="640" y="192" fill="#f3e4dc" font-size="26">Prove what your agents actually did.</text>
+ <text x="640" y="230" fill="#b6bfd0" font-size="16">Agent claim ≠ evidence.</text>
+</g>
+<path d="M135 319H1145" stroke="url(#line)" stroke-width="2"/>
+<g fill="#dfc3db"><path d="m344 313 9 6-9 6z"/><path d="m634 313 9 6-9 6z"/><path d="m924 313 9 6-9 6z"/></g>
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif" text-anchor="middle" font-size="20" fill="#f5f1ee">
+ <rect x="55" y="282" width="255" height="74" rx="14" fill="url(#card)" stroke="#566378"/><text x="182.5" y="326">Agent Action</text>
+ <rect x="360" y="282" width="250" height="74" rx="14" fill="url(#card)" stroke="#71637c"/><text x="485" y="326">Evidence</text>
+ <rect x="660" y="282" width="250" height="74" rx="14" fill="url(#card)" stroke="#987a89"/><text x="785" y="326">Verification</text>
+ <rect x="960" y="282" width="265" height="74" rx="14" fill="url(#card)" stroke="#d3aa92"/><text x="1092.5" y="326">Trusted Outcome</text>
+</g>
+<text x="640" y="396" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif" text-anchor="middle" fill="#d1c4c5" font-size="14" letter-spacing="1">OBSERVE REAL EFFECTS · VERIFY EXPLICIT ASSERTIONS</text>
+</svg>
