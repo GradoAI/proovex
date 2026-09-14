@@ -1,28 +1,47 @@
 # Proovex
 
-**Prove what your agents actually did.**
+English | [简体中文](./README.zh-CN.md)
+
+Prove what your agents actually did.
 
 Proovex is an open, pluggable Evidence Runtime for AI agents.
 
 Capture real agent actions, observe their effects, and independently verify what actually happened.
 
-**Status: Early productization / incubation.** This repository establishes the standalone Proovex product boundary; a standalone implementation is not yet available.
+**Status: Early productization / incubation. A standalone implementation is not yet available.**
+
+## What is Proovex
+
+Proovex is Evidence and verification infrastructure for AI agents. Its intended role is to connect each Run with what the agent did, what changed in the real system, and what independent Verification can establish.
 
 ## Why Proovex
 
-Agent output is a claim. Proovex turns agent execution into verifiable evidence.
+Agent output is a claim. Proovex turns agent execution into verifiable Evidence.
 
-AI agent evidence should connect an Action to its observed Side Effects and a Verifier's result. That makes agent verification useful beyond self-reported success—for agent evaluation, agent security, and AI agent audit.
+AI agent evidence should connect an action to its observed side effects and a Verifier's result. That makes agent verification useful beyond self-reported success—for agent evaluation, agent security, and AI agent audit.
 
-## Core flow
+## Core Flow
 
 ```text
 Capture → Normalize → Store → Verify → Query
 ```
 
-The intended Evidence flow connects each Run with Actions, Observations, State Changes, Side Effects, Artifacts, and Verification results. Collectors capture evidence; Verifiers assess it independently.
+Collectors capture Evidence; Verifiers assess it independently. The flow preserves the distinction between an agent's claim and an observed effect. Missing Evidence remains unknown, not an implied success.
 
-## Designed for
+## What Proovex captures
+
+The intended capture scope includes:
+
+- Actions
+- Observations
+- State changes
+- Side effects
+- Artifacts
+- Verification results
+
+These are the target Evidence categories, not a claim that standalone Collectors have shipped.
+
+## Who it is for
 
 - AI agents, including coding, browser, and MCP agents
 - RPA and computer-use automation (CUA)
@@ -36,7 +55,7 @@ The intended Evidence flow connects each Run with Actions, Observations, State C
 - Verifiable by default
 - Evidence over self-report
 
-## Current status
+## Current Status
 
 Proovex is being productized from capabilities incubated and validated in grado-companion-kit.
 
@@ -46,5 +65,12 @@ Code extraction requires a separate extraction decision and Work Item. No runtim
 
 “Open” describes the intended integration surface. No open-source license has been granted for this repository; the licensing strategy remains undecided.
 
-- [Vision](VISION.md)
-- [Roadmap](ROADMAP.md)
+This English README is the canonical product definition; the Simplified Chinese README is its localization, not a separate product definition.
+
+## Vision
+
+Read the [Vision](./VISION.md) for the long-term direction, independence principles, and product boundaries. This document is currently in English.
+
+## Roadmap
+
+Read the [Roadmap](./ROADMAP.md) for the intended product stages and what remains outside the core runtime. This document is currently in English. No release dates are committed.
