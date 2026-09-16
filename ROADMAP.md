@@ -71,4 +71,4 @@ The following are outside the core runtime roadmap:
 - Prompt management
 - Full SIEM / compliance suite
 
-No release dates are committed. Licensing remains undecided and requires an explicit licensing strategy before any license is added.
+No release dates are committed. Proovex is licensed under the [Apache License 2.0](./LICENSE).

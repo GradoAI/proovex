@@ -24,7 +24,7 @@ Proovex aims to be agent-framework independent, model independent, and execution
 
 Real-world Side Effects matter as much as model output. Evidence should preserve source attribution and enough context to explain what a Verification result establishes—and what it does not.
 
-An open integration surface should let producers, Collectors, Verifiers, and downstream consumers evolve without requiring one agent framework or vendor. This is a design direction; public contracts and licensing still require explicit decisions.
+An open integration surface should let producers, Collectors, Verifiers, and downstream consumers evolve without requiring one agent framework or vendor. This is a design direction; public contracts still require explicit decisions.
 
 ## Non-goals
 
