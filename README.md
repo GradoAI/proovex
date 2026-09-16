@@ -94,7 +94,7 @@ Proovex was incubated from evidence, trust, verification and evaluation capabili
 
 Standalone code extraction requires a separate decision and Work Item; this repository does not maintain a parallel runtime implementation. The experiences described here are targets, not shipped features.
 
-“Open” means the intended integration surface. Licensing remains undecided; this repository grants no open-source license.
+“Open” means the intended integration surface.
 
 The English README is the canonical product definition; the Chinese version is its accurate localization.
 
@@ -105,3 +105,7 @@ Read the [Vision](./VISION.md) for the long-term direction, independence princip
 ## Roadmap
 
 Read the [Roadmap](./ROADMAP.md) for the intended product stages and what remains outside the core runtime. This document is currently in English. No release dates are committed.
+
+## License
+
+Proovex is licensed under the Apache License 2.0. See [LICENSE](./LICENSE).

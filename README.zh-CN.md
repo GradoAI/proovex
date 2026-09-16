@@ -94,7 +94,7 @@ Proovex 的 Evidence、信任、Verification 和评估能力最初在 grado-comp
 
 独立代码提取须通过单独的决策和 Work Item；本仓库不并行维护第二套运行时实现。文中描述的使用体验仍是目标，并非已交付功能。
 
-“开放”指预期的集成接口。许可证策略尚未决定，本仓库没有授予开源许可证。
+“开放”指预期的集成接口。
 
 英文 README 是权威产品定义，中文版是其准确本地化。
 
@@ -105,3 +105,7 @@ Proovex 的 Evidence、信任、Verification 和评估能力最初在 grado-comp
 ## 路线图
 
 阅读 [Roadmap](./ROADMAP.md)，了解计划中的产品阶段及核心运行时范围之外的内容。该文档目前为英文。尚未承诺发布日期。
+
+## 许可证
+
+Proovex 基于 Apache License 2.0 开源。详见 [LICENSE](./LICENSE)。
