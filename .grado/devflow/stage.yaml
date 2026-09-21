@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "design_baseline": "GradoAI/ChatGPT-doc@ee0fc2b26a0bd6459f28cf5110991633fb18ff61",
+  "design_baseline": "GradoAI/ChatGPT-doc@d0aa8d3f180cde323e69d63eb8d8cf93484ad664",
   "stage": {
     "id": "PVX-STAGE-1",
     "name": "Prove Evidence",
@@ -16,7 +16,12 @@
   "exit_gate": {"requires_all_proof_obligations": true},
   "review_policy": {
     "triggers": ["KEY_PROOF_OBLIGATION_SATISFIED", "WORK_CLUSTER_COMPLETE", "NEW_TOP_LEVEL_ABSTRACTION_PROPOSED", "MAX_REVIEW_GAP", "MANDATORY_PRE_EXIT"],
-    "engine_status": "NOT_IMPLEMENTED",
-    "status_when_engine_absent": "UNKNOWN"
+    "engine_status": "IMPLEMENTED",
+    "status_when_engine_absent": "UNKNOWN",
+    "key_proof_obligations": ["PVX-S1-P1"],
+    "max_review_gap": 3,
+    "work_clusters": [
+      {"id": "PVX-S1-CLUSTER", "required_work_packages": ["WP-PVX-S1-P1", "WP-PVX-S1-P2", "WP-PVX-S1-P3", "WP-PVX-S1-P4", "WP-PVX-S1-P5"]}
+    ]
   }
 }

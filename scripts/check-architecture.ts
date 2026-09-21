@@ -110,6 +110,7 @@ function classify(
   if (/^proovex\/tools\/devflow\/README\.md$/.test(file)) return 'config';
   if (/^proovex\/tools\/devflow\/devflow\.test\.ts$/.test(file)) return 'test';
   if (/^proovex\/tools\/devflow\/devflow\.ts$/.test(file)) return 'script';
+  if (/^proovex\/\.github\/workflows\/.+\.ya?ml$/.test(file)) return 'config';
   if (file.endsWith('.ts') && layerOfPath(file)) return 'production';
   return 'unclassified';
 }
