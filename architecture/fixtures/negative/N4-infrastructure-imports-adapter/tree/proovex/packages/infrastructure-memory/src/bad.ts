@@ -1,0 +1,1 @@
+import '@proovex/adapter-grado';

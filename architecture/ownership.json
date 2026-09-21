@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "source": "content/design/records/proovex-arch-contract.contract.yaml machine_enforcement.ownership",
+  "enforced_in_slice": 3,
+  "concepts": [
+    { "concept": "kernel", "owner": "proovex/packages/contracts/src/kernel" },
+    { "concept": "Artifact", "owner": "proovex/packages/contracts/src/artifact" },
+    { "concept": "Run", "owner": "proovex/packages/contracts/src/run" },
+    { "concept": "Observation", "owner": "proovex/packages/contracts/src/observation" },
+    { "concept": "Evidence", "owner": "proovex/packages/contracts/src/evidence" },
+    { "concept": "Verification", "owner": "proovex/packages/contracts/src/verification" }
+  ],
+  "modules": [
+    { "module": "proovex/packages", "design": "content/design/records/proovex-arch-foundation.md" },
+    { "module": "proovex/apps", "design": "content/design/records/proovex-arch-foundation.md" },
+    {
+      "module": "proovex/architecture",
+      "design": "content/design/records/proovex-arch-foundation.md"
+    },
+    { "module": "proovex/scripts", "design": "content/design/records/proovex-arch-foundation.md" },
+    { "module": "proovex/test", "design": "content/design/records/proovex-arch-foundation.md" }
+  ],
+  "transfers": []
+}

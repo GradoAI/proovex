@@ -1,0 +1,15 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+const root = path.resolve(import.meta.dirname, "../.."); const cli = path.join(root, "tools/devflow/devflow.ts"); const state = path.join(root, ".grado/devflow/state.json");
+const stage = path.join(root, ".grado/devflow/stage.yaml"); const initial = fs.readFileSync(state, "utf8"); const initialStage = fs.readFileSync(stage, "utf8");
+const run = (args: string[], input: string) => execFileSync(process.execPath, [cli, ...args], { cwd: root, input, encoding: "utf8" });
+test.after(() => { fs.writeFileSync(state, initial); fs.writeFileSync(stage, initialStage); });
+test("status exposes Stage 1, five proofs, and unknown review state", () => { const out = JSON.parse(run(["status", "--json"], "")); assert.equal(out.active_stage.id, "PVX-STAGE-1"); assert.equal(out.proof_obligations.length, 5); assert.equal(out.review_status, "UNKNOWN"); assert.equal(out.exit_gate.complete, false); });
+test("executor COMPLETE alone cannot satisfy proof", () => { const out = JSON.parse(run(["reconcile"], JSON.stringify({ schema_version: 1, result_id: "r-complete", work_package_id: "WP-PVX-S1-P1", claim: { status: "COMPLETE" } }))); assert.equal(out.proof_obligations[0].state, "UNPROVEN"); });
+test("passing validation satisfies only the targeted proof", () => { const out = JSON.parse(run(["reconcile"], JSON.stringify({ schema_version: 1, result_id: "r-valid", work_package_id: "WP-PVX-S1-P1", claim: { status: "COMPLETE" }, validation_facts: [{ type: "proof-validation", proof_id: "PVX-S1-P1", passed: true, evidence_refs: ["git:abc"] }] }))); assert.equal(out.proof_obligations[0].state, "SATISFIED"); assert.equal(out.proof_obligations[1].state, "UNPROVEN"); });
+test("unknown WorkPackage is rejected", () => { assert.throws(() => run(["reconcile"], JSON.stringify({ schema_version: 1, result_id: "r-unknown", work_package_id: "WP-UNKNOWN", claim: { status: "COMPLETE" }}))); });
+test("invalid StageSpec is rejected", () => { fs.writeFileSync(stage, JSON.stringify({ schema_version: 1, stage: { id: "BAD" }})); assert.throws(() => run(["status", "--json"], "")); fs.writeFileSync(stage, initialStage); });
+test("terminal WorkPackage transition is rejected", () => { const value = JSON.parse(initial); value.work_packages["WP-PVX-S1-P1"].state = "VALIDATED"; fs.writeFileSync(state, JSON.stringify(value)); assert.throws(() => run(["reconcile"], JSON.stringify({ schema_version: 1, result_id: "r-transition", work_package_id: "WP-PVX-S1-P1", claim: { status: "COMPLETE" }}))); fs.writeFileSync(state, initial); });

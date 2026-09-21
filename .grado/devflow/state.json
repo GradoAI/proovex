@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "stage_id": "PVX-STAGE-1",
+  "proof_obligations": {
+    "PVX-S1-P1": "UNPROVEN",
+    "PVX-S1-P2": "UNPROVEN",
+    "PVX-S1-P3": "UNPROVEN",
+    "PVX-S1-P4": "UNPROVEN",
+    "PVX-S1-P5": "UNPROVEN"
+  },
+  "task_contracts": {
+    "TC-PVX-S1-P1": {"id": "TC-PVX-S1-P1", "work_package_id": "WP-PVX-S1-P1", "executor_neutral": true}
+  },
+  "work_packages": {
+    "WP-PVX-S1-P1": {"id": "WP-PVX-S1-P1", "proof_id": "PVX-S1-P1", "task_contract_id": "TC-PVX-S1-P1", "title": "Prove Semantic Vertical Slice", "state": "READY"}
+  },
+  "results": []
+}

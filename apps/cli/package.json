@@ -1,0 +1,13 @@
+{
+  "name": "@proovex/cli",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@proovex/contracts": "*",
+    "@proovex/core": "*",
+    "@proovex/infrastructure-memory": "*"
+  }
+}
