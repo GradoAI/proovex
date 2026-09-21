@@ -17,6 +17,6 @@
   "review_policy": {
     "triggers": ["KEY_PROOF_OBLIGATION_SATISFIED", "WORK_CLUSTER_COMPLETE", "NEW_TOP_LEVEL_ABSTRACTION_PROPOSED", "MAX_REVIEW_GAP", "MANDATORY_PRE_EXIT"],
     "engine_status": "NOT_IMPLEMENTED",
-    "status_when_engine_absent": "NOT_DUE"
+    "status_when_engine_absent": "UNKNOWN"
   }
 }
