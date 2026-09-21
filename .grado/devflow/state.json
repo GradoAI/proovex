@@ -132,16 +132,25 @@
     }
   ],
   "review": {
-    "status": "DUE",
-    "reasons": [
-      "MAX_REVIEW_GAP"
-    ],
-    "completed_since_last_review": 3,
+    "status": "NOT_DUE",
+    "reasons": [],
+    "completed_since_last_review": 0,
     "facts": {
       "last_result_id": "github-workflow-run:35642511874",
-      "last_review_checkpoint": null
+      "last_review_checkpoint": "review-checkpoint:bc31a9bc43017b97"
     },
-    "checkpoints": [],
-    "last_decision": null
+    "checkpoints": [
+      {
+        "checkpoint_id": "review-checkpoint:bc31a9bc43017b97",
+        "packet_id": "alignment-review:8dda3357fbf60439",
+        "decision": "CONTINUE",
+        "reviewed_reasons": [
+          "MAX_REVIEW_GAP"
+        ],
+        "bound_last_result_id": "github-workflow-run:35642511874",
+        "stage_id": "PVX-STAGE-1"
+      }
+    ],
+    "last_decision": "CONTINUE"
   }
 }
