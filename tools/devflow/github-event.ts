@@ -140,6 +140,38 @@ function workflowRun(event: JsonObject): AdapterOutput {
   };
 }
 
+function issueComment(event: JsonObject): AdapterOutput {
+  const comment = event.comment as JsonObject | undefined;
+  const issue = event.issue as JsonObject | undefined;
+  const action = text(event.action);
+  if (!comment || !issue || !action || !['created', 'edited'].includes(action)) return noReconciliation('unsupported issue_comment event');
+
+  const association = text(comment.author_association);
+  if (!association || !['OWNER', 'MEMBER', 'COLLABORATOR'].includes(association)) {
+    return noReconciliation('review decision author is not authorized');
+  }
+
+  const body = text(comment.body) ?? '';
+  const packetId = marker(body, 'DEVFLOW_REVIEW_PACKET');
+  const decision = marker(body, 'DEVFLOW_REVIEW_DECISION');
+  const testOnlyMarker = marker(body, 'DEVFLOW_TEST_ONLY');
+
+  if (!packetId && !decision) return noReconciliation('issue comment is not a DevFlow review decision');
+  if (!packetId || !decision || !['CONTINUE', 'CORRECTION_REQUIRED', 'TOP_LEVEL_DECISION_REQUIRED'].includes(decision)) {
+    return noReconciliation('issue comment review requires valid packet and decision');
+  }
+  if (testOnlyMarker && testOnlyMarker !== 'true' && testOnlyMarker !== 'false') {
+    return noReconciliation('DEVFLOW_TEST_ONLY must be true or false');
+  }
+
+  const testOnly = testOnlyMarker === 'true';
+  return {
+    kind: 'REVIEW',
+    state_target: testOnly ? 'e2e' : 'canonical',
+    review: { packet_id: packetId, decision: decision as ReviewDecision },
+  };
+}
+
 function dispatch(event: JsonObject): AdapterOutput {
   const inputs = (event.inputs ?? {}) as JsonObject;
   const packetId = text(inputs.review_packet_id);
@@ -173,6 +205,7 @@ export function adaptGithubEvent(event: unknown): AdapterOutput {
   const payload = event as JsonObject;
   if (payload.pull_request) return prEvent(payload);
   if (payload.workflow_run) return workflowRun(payload);
+  if (payload.comment && payload.issue) return issueComment(payload);
   if (payload.inputs || payload.result_envelope) return dispatch(payload);
   return noReconciliation('unsupported GitHub event');
 }

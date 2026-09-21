@@ -107,3 +107,43 @@ test('workflow dispatch supports explicit review decision with fixed state targe
   if (e2e.kind === 'REVIEW') assert.equal(e2e.state_target, 'e2e');
   assert.equal(adaptGithubEvent({ inputs: { review_packet_id: 'x', review_decision: 'BAD' } }).kind, 'NO_RECONCILIATION');
 });
+
+
+test('issue comment accepts authorized Human Review Decision and preserves fixed e2e routing', () => {
+  const out = adaptGithubEvent({
+    action: 'created',
+    issue: { number: 16, pull_request: { url: 'https://example.test/pr/16' } },
+    comment: {
+      author_association: 'MEMBER',
+      body: 'DEVFLOW_REVIEW_PACKET: alignment-review:8ad0a0fb34b8c547\nDEVFLOW_REVIEW_DECISION: CONTINUE\nDEVFLOW_TEST_ONLY: true',
+    },
+  });
+  assert.equal(out.kind, 'REVIEW');
+  if (out.kind === 'REVIEW') {
+    assert.equal(out.state_target, 'e2e');
+    assert.equal(out.review.packet_id, 'alignment-review:8ad0a0fb34b8c547');
+    assert.equal(out.review.decision, 'CONTINUE');
+  }
+});
+
+test('issue comment rejects unauthorized or malformed review decisions', () => {
+  const unauthorized = adaptGithubEvent({
+    action: 'created',
+    issue: { number: 16 },
+    comment: {
+      author_association: 'NONE',
+      body: 'DEVFLOW_REVIEW_PACKET: alignment-review:x\nDEVFLOW_REVIEW_DECISION: CONTINUE',
+    },
+  });
+  assert.equal(unauthorized.kind, 'NO_RECONCILIATION');
+
+  const malformed = adaptGithubEvent({
+    action: 'created',
+    issue: { number: 16 },
+    comment: {
+      author_association: 'MEMBER',
+      body: 'DEVFLOW_REVIEW_PACKET: alignment-review:x\nDEVFLOW_REVIEW_DECISION: BAD',
+    },
+  });
+  assert.equal(malformed.kind, 'NO_RECONCILIATION');
+});

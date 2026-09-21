@@ -74,3 +74,28 @@ Allowed decisions:
 A StageGatePacket is read-only and can be generated only after all proof obligations are satisfied, accepted-artifact backlinks are present, and the mandatory pre-exit review has a durable `CONTINUE` checkpoint bound to the latest result. The controller never advances the Stage automatically.
 
 GitHub `workflow_dispatch` can record an explicit review decision. `devflow_test_only: true` routes only to the fixed `devflow/e2e-state` branch; canonical state remains fixed at `devflow/state`.
+
+
+## Human decision transport from Web
+
+A Human Review Decision can be persisted as a structured GitHub issue/PR comment and consumed by the same controller path:
+
+```text
+DEVFLOW_REVIEW_PACKET: alignment-review:...
+DEVFLOW_REVIEW_DECISION: CONTINUE | CORRECTION_REQUIRED | TOP_LEVEL_DECISION_REQUIRED
+DEVFLOW_TEST_ONLY: true | false
+```
+
+The GitHub adapter accepts only comments whose `author_association` is `OWNER`, `MEMBER`, or `COLLABORATOR`. The packet ID is still validated by `review-record` against the current deterministic AlignmentReviewPacket, so a stale comment cannot advance review state.
+
+This is a transport adapter only:
+
+```text
+ChatGPT Web Human Decision
+→ structured GitHub comment
+→ GitHub adapter
+→ existing review-record
+→ project-owned durable ReviewCheckpoint
+```
+
+It does not create a second review engine or move governance authority into ChatGPT-doc.
