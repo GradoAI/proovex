@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "source": "content/design/records/proovex-arch-contract.contract.yaml machine_enforcement.layers",
+  "layers": [
+    {
+      "name": "contracts",
+      "tier": "core",
+      "roots": ["proovex/packages/contracts/src"],
+      "packages": ["@proovex/contracts"],
+      "allowed_layers": [],
+      "allowed_external": ["zod"],
+      "allowed_node_builtins": []
+    },
+    {
+      "name": "core",
+      "tier": "core",
+      "roots": ["proovex/packages/core/src"],
+      "packages": ["@proovex/core"],
+      "allowed_layers": ["contracts"],
+      "allowed_external": [],
+      "allowed_node_builtins": []
+    },
+    {
+      "name": "infrastructure",
+      "tier": "infrastructure",
+      "roots": ["proovex/packages/infrastructure-*/src"],
+      "packages": ["@proovex/infrastructure-*"],
+      "allowed_layers": ["contracts", "core"],
+      "allowed_external": [],
+      "allowed_node_builtins": [
+        "node:fs",
+        "node:fs/promises",
+        "node:path",
+        "node:crypto",
+        "node:os"
+      ]
+    },
+    {
+      "name": "adapters",
+      "tier": "adapters",
+      "roots": ["proovex/packages/adapter-*/src"],
+      "packages": ["@proovex/adapter-*"],
+      "allowed_layers": ["contracts", "core"],
+      "allowed_external": [],
+      "allowed_node_builtins": ["node:fs", "node:path", "node:crypto"]
+    },
+    {
+      "name": "consumers",
+      "tier": "consumers",
+      "roots": ["proovex/apps/*/src"],
+      "packages": ["@proovex/cli"],
+      "allowed_layers": ["contracts", "core", "infrastructure", "adapters"],
+      "allowed_external": [],
+      "allowed_node_builtins": ["node:util", "node:process", "node:http", "node:fs", "node:path"]
+    }
+  ]
+}
