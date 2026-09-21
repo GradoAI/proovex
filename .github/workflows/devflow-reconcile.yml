@@ -66,6 +66,8 @@ jobs:
           esac
           if git fetch origin "refs/heads/${state_branch}:refs/remotes/origin/${state_branch}"; then
             git show "refs/remotes/origin/${state_branch}:.grado/devflow/state.json" > .grado/devflow/state.json
+          elif [ "$STATE_TARGET" = e2e ] && git fetch origin refs/heads/devflow/state:refs/remotes/origin/devflow/state; then
+            git show refs/remotes/origin/devflow/state:.grado/devflow/state.json > .grado/devflow/state.json
           fi
       - name: Reconcile ResultEnvelope
         if: steps.adapt.outputs.kind == 'RECONCILE'
