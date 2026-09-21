@@ -2,7 +2,7 @@
   "schema_version": 1,
   "stage_id": "PVX-STAGE-1",
   "proof_obligations": {
-    "PVX-S1-P1": "UNPROVEN",
+    "PVX-S1-P1": "SATISFIED",
     "PVX-S1-P2": "SATISFIED",
     "PVX-S1-P3": "UNPROVEN",
     "PVX-S1-P4": "UNPROVEN",
@@ -56,7 +56,7 @@
       "proof_id": "PVX-S1-P1",
       "task_contract_id": "TC-PVX-S1-P1",
       "title": "Prove Semantic Vertical Slice",
-      "state": "READY"
+      "state": "VALIDATED"
     },
     "WP-PVX-S1-P2": {
       "id": "WP-PVX-S1-P2",
@@ -94,15 +94,33 @@
       "work_package_id": "WP-PVX-S1-P2",
       "claim_status": "COMPLETE",
       "validation_applied": true
+    },
+    {
+      "result_id": "github-workflow-run:35639639739",
+      "task_contract_id": "TC-PVX-S1-P1",
+      "work_package_id": "WP-PVX-S1-P1",
+      "claim_status": "COMPLETE",
+      "validation_applied": true,
+      "proof_id": "PVX-S1-P1",
+      "evidence_refs": [
+        "github-workflow-run:35639639739",
+        "github-pr:16",
+        "git:75ce26cd1aa3d13b5accab349a772c7b14d030f9"
+      ],
+      "accepted_artifact_ref": "git:75ce26cd1aa3d13b5accab349a772c7b14d030f9"
     }
   ],
   "review": {
-    "status": "NOT_DUE",
-    "reasons": [],
-    "completed_since_last_review": 1,
+    "status": "DUE",
+    "reasons": [
+      "KEY_PROOF_OBLIGATION_SATISFIED:PVX-S1-P1"
+    ],
+    "completed_since_last_review": 2,
     "facts": {
-      "last_result_id": "github-workflow-run:35632748698",
+      "last_result_id": "github-workflow-run:35639639739",
       "last_review_checkpoint": null
-    }
+    },
+    "checkpoints": [],
+    "last_decision": null
   }
 }
