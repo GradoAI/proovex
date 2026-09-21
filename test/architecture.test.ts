@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +10,7 @@ import {
 } from '../scripts/check-architecture.ts';
 
 const fixtures = fileURLToPath(new URL('../architecture/fixtures/', import.meta.url));
-const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
+const repoRoot = fileURLToPath(new URL('../', import.meta.url));
 
 for (const kind of ['positive', 'negative']) {
   for (const name of readdirSync(join(fixtures, kind)).sort()) {
@@ -35,6 +35,16 @@ for (const kind of ['positive', 'negative']) {
 test('production tree passes the six implemented rules', () => {
   const result = checkArchitecture(repoRoot);
   assert.deepEqual(result.violations, []);
+});
+
+test('architecture validation is independent of checkout directory name', () => {
+  const temp = mkdtempSync(join('/tmp', 'proovex-path-test-'));
+  try {
+    cpSync(repoRoot, temp, { recursive: true, filter: (source) => !source.includes('/node_modules/') && !source.includes('/.git/') });
+    assert.deepEqual(checkArchitecture(repoRoot), checkArchitecture(temp));
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
 });
 
 test('slice 1 declares exactly six implemented rules and eleven not covered', () => {

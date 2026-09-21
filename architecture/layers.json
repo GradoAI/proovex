@@ -5,7 +5,7 @@
     {
       "name": "contracts",
       "tier": "core",
-      "roots": ["proovex/packages/contracts/src"],
+      "roots": ["packages/contracts/src"],
       "packages": ["@proovex/contracts"],
       "allowed_layers": [],
       "allowed_external": ["zod"],
@@ -14,7 +14,7 @@
     {
       "name": "core",
       "tier": "core",
-      "roots": ["proovex/packages/core/src"],
+      "roots": ["packages/core/src"],
       "packages": ["@proovex/core"],
       "allowed_layers": ["contracts"],
       "allowed_external": [],
@@ -23,7 +23,7 @@
     {
       "name": "infrastructure",
       "tier": "infrastructure",
-      "roots": ["proovex/packages/infrastructure-*/src"],
+      "roots": ["packages/infrastructure-*/src"],
       "packages": ["@proovex/infrastructure-*"],
       "allowed_layers": ["contracts", "core"],
       "allowed_external": [],
@@ -38,7 +38,7 @@
     {
       "name": "adapters",
       "tier": "adapters",
-      "roots": ["proovex/packages/adapter-*/src"],
+      "roots": ["packages/adapter-*/src"],
       "packages": ["@proovex/adapter-*"],
       "allowed_layers": ["contracts", "core"],
       "allowed_external": [],
@@ -47,7 +47,7 @@
     {
       "name": "consumers",
       "tier": "consumers",
-      "roots": ["proovex/apps/*/src"],
+      "roots": ["apps/*/src"],
       "packages": ["@proovex/cli"],
       "allowed_layers": ["contracts", "core", "infrastructure", "adapters"],
       "allowed_external": [],
