@@ -1,0 +1,12 @@
+{
+  "name": "@proovex/infrastructure-memory",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@proovex/contracts": "*",
+    "@proovex/core": "*"
+  }
+}

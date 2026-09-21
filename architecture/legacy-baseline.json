@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "measure": "tracked-line-count",
+  "meaning": "drift signal only; enforced in slice 3",
+  "baseline_source_revision": "c6a4fbdf87632631f2ad4f6a57b1b62a0d6bc42d",
+  "legacy_bridges": [],
+  "frozen_hotspots": [
+    { "path": "adapter/evaluation-console/projection.mjs", "lines": 309 },
+    { "path": "adapter/evaluation-console/workspace-projection.mjs", "lines": 168 },
+    { "path": "bin/serve-evaluation-console.mjs", "lines": 107 },
+    { "path": "bin/run-g4-holdout.mjs", "lines": 62 },
+    { "path": "bin/adapter-eval.mjs", "lines": 26 }
+  ],
+  "exceptions": []
+}
