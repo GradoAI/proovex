@@ -1,0 +1,24 @@
+name: DevFlow StageGate E2E Probe
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  stage-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Load isolated E2E durable state
+        run: |
+          git fetch origin refs/heads/devflow/e2e-state:refs/remotes/origin/devflow/e2e-state
+          git show refs/remotes/origin/devflow/e2e-state:.grado/devflow/state.json > .grado/devflow/state.json
+      - name: Show Bootstrap projection
+        run: node tools/devflow/devflow.ts status --json
+      - name: Generate StageGatePacket
+        run: node tools/devflow/devflow.ts stage-gate-packet
