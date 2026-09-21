@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "stage_id": "PVX-STAGE-1",
+  "proof_obligations": {
+    "PVX-S1-P1": "UNPROVEN",
+    "PVX-S1-P2": "SATISFIED",
+    "PVX-S1-P3": "UNPROVEN",
+    "PVX-S1-P4": "UNPROVEN",
+    "PVX-S1-P5": "UNPROVEN"
+  },
+  "task_contracts": {
+    "TC-PVX-S1-P1": {
+      "id": "TC-PVX-S1-P1",
+      "work_package_id": "WP-PVX-S1-P1",
+      "executor_neutral": true,
+      "architecture_fit": {
+        "change": "EXTEND"
+      }
+    },
+    "TC-PVX-S1-P2": {
+      "id": "TC-PVX-S1-P2",
+      "work_package_id": "WP-PVX-S1-P2",
+      "executor_neutral": true,
+      "architecture_fit": {
+        "change": "EXTEND"
+      }
+    },
+    "TC-PVX-S1-P3": {
+      "id": "TC-PVX-S1-P3",
+      "work_package_id": "WP-PVX-S1-P3",
+      "executor_neutral": true,
+      "architecture_fit": {
+        "change": "EXTEND"
+      }
+    },
+    "TC-PVX-S1-P4": {
+      "id": "TC-PVX-S1-P4",
+      "work_package_id": "WP-PVX-S1-P4",
+      "executor_neutral": true,
+      "architecture_fit": {
+        "change": "EXTEND"
+      }
+    },
+    "TC-PVX-S1-P5": {
+      "id": "TC-PVX-S1-P5",
+      "work_package_id": "WP-PVX-S1-P5",
+      "executor_neutral": true,
+      "architecture_fit": {
+        "change": "EXTEND"
+      }
+    }
+  },
+  "work_packages": {
+    "WP-PVX-S1-P1": {
+      "id": "WP-PVX-S1-P1",
+      "proof_id": "PVX-S1-P1",
+      "task_contract_id": "TC-PVX-S1-P1",
+      "title": "Prove Semantic Vertical Slice",
+      "state": "READY"
+    },
+    "WP-PVX-S1-P2": {
+      "id": "WP-PVX-S1-P2",
+      "proof_id": "PVX-S1-P2",
+      "task_contract_id": "TC-PVX-S1-P2",
+      "title": "Prove Evidence Identity",
+      "state": "VALIDATED"
+    },
+    "WP-PVX-S1-P3": {
+      "id": "WP-PVX-S1-P3",
+      "proof_id": "PVX-S1-P3",
+      "task_contract_id": "TC-PVX-S1-P3",
+      "title": "Prove First Real Producer",
+      "state": "READY"
+    },
+    "WP-PVX-S1-P4": {
+      "id": "WP-PVX-S1-P4",
+      "proof_id": "PVX-S1-P4",
+      "task_contract_id": "TC-PVX-S1-P4",
+      "title": "Prove First Verified Run",
+      "state": "READY"
+    },
+    "WP-PVX-S1-P5": {
+      "id": "WP-PVX-S1-P5",
+      "proof_id": "PVX-S1-P5",
+      "task_contract_id": "TC-PVX-S1-P5",
+      "title": "Prove False Claim Detection",
+      "state": "READY"
+    }
+  },
+  "results": [
+    {
+      "result_id": "github-workflow-run:35632748698",
+      "task_contract_id": "TC-PVX-S1-P2",
+      "work_package_id": "WP-PVX-S1-P2",
+      "claim_status": "COMPLETE",
+      "validation_applied": true
+    }
+  ],
+  "review": {
+    "status": "NOT_DUE",
+    "reasons": [],
+    "completed_since_last_review": 1,
+    "facts": {
+      "last_result_id": "github-workflow-run:35632748698",
+      "last_review_checkpoint": null
+    }
+  }
+}
