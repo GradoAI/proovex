@@ -1,0 +1,27 @@
+name: DevFlow Reconcile
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run architecture
+      - run: npm run build
+      - run: node tools/devflow/devflow.ts status --json
