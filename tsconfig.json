@@ -20,7 +20,8 @@
     "apps/*/src/**/*.ts",
     "apps/*/test/**/*.ts",
     "scripts/**/*.ts",
-    "test/**/*.ts"
+    "test/**/*.ts",
+    "tools/devflow/**/*.ts"
   ],
   "exclude": ["node_modules", "architecture/fixtures"]
 }
