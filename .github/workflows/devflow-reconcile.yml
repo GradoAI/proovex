@@ -8,6 +8,8 @@ on:
     types: [completed]
   pull_request:
     types: [closed]
+  issue_comment:
+    types: [created, edited]
   workflow_dispatch:
     inputs:
       result_envelope:
@@ -34,10 +36,12 @@ concurrency:
 
 jobs:
   reconcile:
+    if: github.event_name != 'issue_comment' || contains(github.event.comment.body, 'DEVFLOW_REVIEW_PACKET:')
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: read
+      issues: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
