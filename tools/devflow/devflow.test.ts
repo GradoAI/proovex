@@ -13,7 +13,7 @@ const initialStage = fs.readFileSync(stageFile, "utf8");
 const run = (args: string[], input = "") => execFileSync(process.execPath, [cli, ...args], { cwd: root, input, encoding: "utf8" });
 const runWithoutExecutors = (args: string[], input = "") => { const env = { ...process.env }; delete env.RELAY_URL; delete env.ANTHROPIC_API_KEY; delete env.OPENAI_API_KEY; return execFileSync(process.execPath, [cli, ...args], { cwd: root, input, encoding: "utf8", env }); };
 const reset = () => { fs.writeFileSync(stateFile, initialState); fs.writeFileSync(stageFile, initialStage); };
-const result = (id: string, wp: string, proof: string, extra: Record<string, unknown> = {}) => JSON.stringify({ schema_version: 1, result_id: id, work_package_id: wp, claim: { status: "COMPLETE" }, validation_facts: [{ type: "proof-validation", proof_id: proof, passed: true, evidence_refs: [`git:${id}`] }], ...extra });
+const result = (id: string, wp: string, proof: string, extra: Record<string, unknown> = {}) => JSON.stringify({ schema_version: 1, result_id: id, work_package_id: wp, claim: { status: "COMPLETE" }, validation_facts: [{ type: "proof-validation", proof_id: proof, passed: true, evidence_refs: [`git:${id}`], accepted_artifact_ref: `git:${id}` }], ...extra });
 const status = () => JSON.parse(run(["status", "--json"]));
 const reconcile = (body: string) => JSON.parse(run(["reconcile"], body));
 const configureReview = (change: (stage: Record<string, unknown>) => void) => { const stage = JSON.parse(initialStage) as Record<string, unknown>; change(stage); fs.writeFileSync(stageFile, JSON.stringify(stage)); };
@@ -31,3 +31,14 @@ test("review trigger state survives restart", () => { reset(); reconcile(result(
 test("DUE remains blocked for ordinary work", () => { reset(); reconcile(result("due-block", "WP-PVX-S1-P1", "PVX-S1-P1")); const out = reconcile(result("after-due", "WP-PVX-S1-P2", "PVX-S1-P2")); assert.equal(out.review_status, "DUE"); assert.equal(out.next_eligible_action, "ALIGNMENT_REVIEW"); });
 test("controller runs without Relay or provider credentials", () => { reset(); const out = JSON.parse(runWithoutExecutors(["status", "--json"])); assert.equal(out.review_status, "NOT_DUE"); });
 test("invalid StageSpec and unknown WorkPackage remain rejected", () => { reset(); fs.writeFileSync(stageFile, JSON.stringify({ schema_version: 1, stage: { id: "BAD" }})); assert.throws(() => status()); reset(); assert.throws(() => reconcile(JSON.stringify({ schema_version: 1, result_id: "unknown", work_package_id: "WP-UNKNOWN", claim: { status: "COMPLETE" }}))); });
+test("proof validation requires an accepted artifact and rejects mismatches", () => {
+  reset();
+  const missing = JSON.parse(result("missing-artifact", "WP-PVX-S1-P1", "PVX-S1-P1"));
+  delete missing.validation_facts[0].accepted_artifact_ref;
+  const missingOut = reconcile(JSON.stringify(missing));
+  assert.equal(missingOut.exit_gate.complete, false);
+  reset();
+  const mismatch = JSON.parse(result("mismatch-artifact", "WP-PVX-S1-P1", "PVX-S1-P1"));
+  mismatch.validation_facts[0].accepted_artifact_ref = "git:other";
+  assert.throws(() => reconcile(JSON.stringify(mismatch)), /artifact binding mismatch/);
+});

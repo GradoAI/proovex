@@ -7,9 +7,10 @@ import test from 'node:test';
 import { adaptGithubEvent } from './github-event.ts';
 
 const body = `DEVFLOW_WORK_PACKAGE: WP-PVX-S1-P1\nDEVFLOW_TASK_CONTRACT: TC-PVX-S1-P1\nDEVFLOW_PROOF: PVX-S1-P1\nARCHITECTURE_CHANGE: EXTEND`;
+const testBody = `${body}\nDEVFLOW_TEST_ONLY: true`;
 
 test('merged PR metadata produces a ResultEnvelope without proof validation', () => {
-  const out = adaptGithubEvent({ action: 'closed', pull_request: { number: 7, merged: true, merge_commit_sha: 'abc123', body } });
+  const out = adaptGithubEvent({ action: 'closed', pull_request: { number: 7, merged: true, base_ref: 'main', merge_commit_sha: 'abc123', body } });
   assert.equal(out.kind, 'RECONCILE');
   if (out.kind === 'RECONCILE') {
     assert.equal(out.envelope.work_package_id, 'WP-PVX-S1-P1');
@@ -19,26 +20,35 @@ test('merged PR metadata produces a ResultEnvelope without proof validation', ()
 });
 
 test('closed but unmerged PR is ignored', () => {
-  assert.deepEqual(adaptGithubEvent({ action: 'closed', pull_request: { merged: false, body } }), { kind: 'NO_RECONCILIATION', reason: 'pull request was not merged' });
+  const out = adaptGithubEvent({ action: 'closed', pull_request: { merged: false, body } });
+  assert.equal(out.kind, 'NO_RECONCILIATION');
+  if (out.kind === 'NO_RECONCILIATION') assert.equal(out.state_target, 'canonical');
 });
 
 test('missing or malformed PR metadata is rejected', () => {
-  assert.equal(adaptGithubEvent({ action: 'closed', pull_request: { merged: true, number: 1, merge_commit_sha: 'x', body: '' } }).kind, 'NO_RECONCILIATION');
-  assert.equal(adaptGithubEvent({ action: 'closed', pull_request: { merged: true, number: 1, merge_commit_sha: 'x', body: body.replace('EXTEND', 'BAD') } }).kind, 'NO_RECONCILIATION');
+  assert.equal(adaptGithubEvent({ action: 'closed', pull_request: { merged: true, number: 1, base_ref: 'main', merge_commit_sha: 'x', body: '' } }).kind, 'NO_RECONCILIATION');
+  assert.equal(adaptGithubEvent({ action: 'closed', pull_request: { merged: true, number: 1, base_ref: 'main', merge_commit_sha: 'x', body: body.replace('EXTEND', 'BAD') } }).kind, 'NO_RECONCILIATION');
 });
 
 test('CREATE metadata reaches the existing blocking trigger', () => {
-  const out = adaptGithubEvent({ action: 'closed', pull_request: { merged: true, number: 2, merge_commit_sha: 'def456', body: `${body.replace('EXTEND', 'CREATE')}\nPROPOSED_TOP_LEVEL_ABSTRACTION: EvidenceGraph` } });
+  const out = adaptGithubEvent({ action: 'closed', pull_request: { merged: true, number: 2, base_ref: 'main', merge_commit_sha: 'def456', body: `${body.replace('EXTEND', 'CREATE')}\nPROPOSED_TOP_LEVEL_ABSTRACTION: EvidenceGraph` } });
   assert.equal(out.kind, 'RECONCILE');
   if (out.kind === 'RECONCILE') assert.equal(out.envelope.architecture_fit?.change, 'CREATE');
 });
 
 test('successful workflow needs explicit binding and creates proof validation', () => {
-  const out = adaptGithubEvent({ action: 'completed', workflow_run: { id: 9, conclusion: 'success', head_sha: 'fedcba', pull_requests: [{ number: 3 }] }, devflow_pr: { number: 3, body, head_sha: 'fedcba' } });
+  const out = adaptGithubEvent({ action: 'completed', workflow_run: { id: 9, conclusion: 'success', head_sha: 'fedcba', pull_requests: [{ number: 3 }] }, devflow_pr: { number: 3, body, merged: true, base_ref: 'main', merge_commit_sha: 'fedcba', head_sha: 'fedcba' } });
   assert.equal(out.kind, 'RECONCILE');
-  if (out.kind === 'RECONCILE') assert.equal(out.envelope.validation_facts?.[0]?.type, 'proof-validation');
-  assert.equal(adaptGithubEvent({ action: 'completed', workflow_run: { id: 10, conclusion: 'success', head_sha: 'x' }, devflow_pr: { number: 4, body, head_sha: 'different' } }).kind, 'NO_RECONCILIATION');
+  if (out.kind === 'RECONCILE') {
+    assert.equal(out.state_target, 'canonical');
+    assert.equal(out.envelope.validation_facts?.[0]?.type, 'proof-validation');
+    assert.equal(out.envelope.validation_facts?.[0]?.accepted_artifact_ref, 'git:fedcba');
+  }
+  assert.equal(adaptGithubEvent({ action: 'completed', workflow_run: { id: 10, conclusion: 'success', head_sha: 'x' }, devflow_pr: { number: 4, body, merged: false, base_ref: 'main', head_sha: 'x' } }).kind, 'NO_RECONCILIATION');
   assert.equal(adaptGithubEvent({ action: 'completed', workflow_run: { id: 11, conclusion: 'success', head_sha: 'x' } }).kind, 'NO_RECONCILIATION');
+  const testOnly = adaptGithubEvent({ action: 'completed', workflow_run: { id: 12, conclusion: 'success', head_sha: 'testsha', pull_requests: [{ number: 5 }] }, devflow_pr: { number: 5, body: testBody, merged: false, base_ref: 'main', head_sha: 'testsha' } });
+  assert.equal(testOnly.kind, 'RECONCILE');
+  if (testOnly.kind === 'RECONCILE') assert.equal(testOnly.state_target, 'e2e');
 });
 
 test('workflow dispatch supports explicit recovery envelope', () => {
@@ -55,7 +65,7 @@ test('GitHub event envelope reaches reconcile and survives a fresh process', () 
   fs.writeFileSync(path.join(tempRoot, '.grado/devflow/stage.yaml'), execFileSync('git', ['show', 'HEAD:.grado/devflow/stage.yaml'], { cwd: root, encoding: 'utf8' }));
   const stateFile = path.join(tempRoot, '.grado/devflow/state.json');
   fs.writeFileSync(stateFile, execFileSync('git', ['show', 'HEAD:.grado/devflow/state.json'], { cwd: root, encoding: 'utf8' }));
-  const event = adaptGithubEvent({ action: 'completed', workflow_run: { id: 99, conclusion: 'success', head_sha: '012345', pull_requests: [{ number: 8 }] }, devflow_pr: { number: 8, body, head_sha: '012345' } });
+  const event = adaptGithubEvent({ action: 'completed', workflow_run: { id: 99, conclusion: 'success', head_sha: '012345', pull_requests: [{ number: 8 }] }, devflow_pr: { number: 8, body: testBody, merged: false, base_ref: 'main', head_sha: '012345' } });
   assert.equal(event.kind, 'RECONCILE');
   if (event.kind !== 'RECONCILE') return;
   const cli = path.join(root, 'tools/devflow/devflow.ts');
@@ -76,7 +86,7 @@ test('sequential durable events load the prior projection before reconciling', (
   fs.writeFileSync(stateFile, execFileSync('git', ['show', 'HEAD:.grado/devflow/state.json'], { cwd: root, encoding: 'utf8' }));
   const cli = path.join(root, 'tools/devflow/devflow.ts');
   const env = { ...process.env, DEVFLOW_ROOT: tempRoot, DEVFLOW_STATE_FILE: stateFile };
-  const envelope = (id: string, wp: string, proof: string) => ({ schema_version: 1, result_id: id, work_package_id: wp, task_contract_id: `TC-${proof}`, claim: { status: 'COMPLETE' }, validation_facts: [{ type: 'proof-validation', proof_id: proof, passed: true, evidence_refs: [`git:${id}`] }] });
+  const envelope = (id: string, wp: string, proof: string) => ({ schema_version: 1, result_id: id, work_package_id: wp, task_contract_id: `TC-${proof}`, claim: { status: 'COMPLETE' }, validation_facts: [{ type: 'proof-validation', proof_id: proof, passed: true, evidence_refs: [`git:${id}`], accepted_artifact_ref: `git:${id}` }] });
   execFileSync(process.execPath, [cli, 'reconcile'], { cwd: root, env, input: JSON.stringify(envelope('sequence-1', 'WP-PVX-S1-P2', 'PVX-S1-P2')), encoding: 'utf8' });
   execFileSync(process.execPath, [cli, 'reconcile'], { cwd: root, env, input: JSON.stringify(envelope('sequence-2', 'WP-PVX-S1-P3', 'PVX-S1-P3')), encoding: 'utf8' });
   const status = JSON.parse(execFileSync(process.execPath, [cli, 'status', '--json'], { cwd: root, env, encoding: 'utf8' })) as { proof_obligations: Array<{ id: string; state: string }> };
