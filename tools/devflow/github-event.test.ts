@@ -34,10 +34,11 @@ test('CREATE metadata reaches the existing blocking trigger', () => {
 });
 
 test('successful workflow needs explicit binding and creates proof validation', () => {
-  const out = adaptGithubEvent({ action: 'completed', workflow_run: { id: 9, conclusion: 'success', head_sha: 'fedcba', devflow: { work_package_id: 'WP-PVX-S1-P1', task_contract_id: 'TC-PVX-S1-P1', proof_id: 'PVX-S1-P1' } } });
+  const out = adaptGithubEvent({ action: 'completed', workflow_run: { id: 9, conclusion: 'success', head_sha: 'fedcba', pull_requests: [{ number: 3 }] }, devflow_pr: { number: 3, body, head_sha: 'fedcba' } });
   assert.equal(out.kind, 'RECONCILE');
   if (out.kind === 'RECONCILE') assert.equal(out.envelope.validation_facts?.[0]?.type, 'proof-validation');
-  assert.equal(adaptGithubEvent({ action: 'completed', workflow_run: { id: 10, conclusion: 'success', head_sha: 'x' } }).kind, 'NO_RECONCILIATION');
+  assert.equal(adaptGithubEvent({ action: 'completed', workflow_run: { id: 10, conclusion: 'success', head_sha: 'x' }, devflow_pr: { number: 4, body, head_sha: 'different' } }).kind, 'NO_RECONCILIATION');
+  assert.equal(adaptGithubEvent({ action: 'completed', workflow_run: { id: 11, conclusion: 'success', head_sha: 'x' } }).kind, 'NO_RECONCILIATION');
 });
 
 test('workflow dispatch supports explicit recovery envelope', () => {
@@ -51,7 +52,7 @@ test('GitHub event envelope reaches reconcile and survives a fresh process', () 
   const root = path.resolve(import.meta.dirname, '../..');
   const stateFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'devflow-state-')), 'state.json');
   fs.copyFileSync(path.join(root, '.grado/devflow/state.json'), stateFile);
-  const event = adaptGithubEvent({ action: 'completed', workflow_run: { id: 99, conclusion: 'success', head_sha: '012345', devflow: { work_package_id: 'WP-PVX-S1-P1', task_contract_id: 'TC-PVX-S1-P1', proof_id: 'PVX-S1-P1' } } });
+  const event = adaptGithubEvent({ action: 'completed', workflow_run: { id: 99, conclusion: 'success', head_sha: '012345', pull_requests: [{ number: 8 }] }, devflow_pr: { number: 8, body, head_sha: '012345' } });
   assert.equal(event.kind, 'RECONCILE');
   if (event.kind !== 'RECONCILE') return;
   const cli = path.join(root, 'tools/devflow/devflow.ts');
@@ -60,4 +61,19 @@ test('GitHub event envelope reaches reconcile and survives a fresh process', () 
   const status = JSON.parse(execFileSync(process.execPath, [cli, 'status', '--json'], { cwd: root, env, encoding: 'utf8' })) as { exit_gate: { complete: boolean }; proof_obligations: Array<{ id: string; state: string }> };
   assert.equal(status.proof_obligations.find((proof) => proof.id === 'PVX-S1-P1')?.state, 'SATISFIED');
   assert.equal(status.exit_gate.complete, false);
+});
+
+test('sequential durable events load the prior projection before reconciling', () => {
+  const root = path.resolve(import.meta.dirname, '../..');
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'devflow-sequence-'));
+  const stateFile = path.join(stateDir, 'state.json');
+  fs.copyFileSync(path.join(root, '.grado/devflow/state.json'), stateFile);
+  const cli = path.join(root, 'tools/devflow/devflow.ts');
+  const env = { ...process.env, DEVFLOW_STATE_FILE: stateFile };
+  const envelope = (id: string, wp: string, proof: string) => ({ schema_version: 1, result_id: id, work_package_id: wp, task_contract_id: `TC-${proof}`, claim: { status: 'COMPLETE' }, validation_facts: [{ type: 'proof-validation', proof_id: proof, passed: true, evidence_refs: [`git:${id}`] }] });
+  execFileSync(process.execPath, [cli, 'reconcile'], { cwd: root, env, input: JSON.stringify(envelope('sequence-1', 'WP-PVX-S1-P2', 'PVX-S1-P2')), encoding: 'utf8' });
+  execFileSync(process.execPath, [cli, 'reconcile'], { cwd: root, env, input: JSON.stringify(envelope('sequence-2', 'WP-PVX-S1-P3', 'PVX-S1-P3')), encoding: 'utf8' });
+  const status = JSON.parse(execFileSync(process.execPath, [cli, 'status', '--json'], { cwd: root, env, encoding: 'utf8' })) as { proof_obligations: Array<{ id: string; state: string }> };
+  assert.equal(status.proof_obligations.find((proof) => proof.id === 'PVX-S1-P2')?.state, 'SATISFIED');
+  assert.equal(status.proof_obligations.find((proof) => proof.id === 'PVX-S1-P3')?.state, 'SATISFIED');
 });

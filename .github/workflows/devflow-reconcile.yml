@@ -1,6 +1,8 @@
 name: DevFlow Reconcile
 
 on:
+  push:
+    branches: [main]
   pull_request:
     types: [closed]
   workflow_run:
@@ -22,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -33,10 +36,27 @@ jobs:
       - run: npm run typecheck
       - run: npm run architecture
       - run: npm run build
+      - name: Load latest durable state
+        run: |
+          if git fetch origin refs/heads/devflow/state:refs/remotes/origin/devflow/state; then
+            git show refs/remotes/origin/devflow/state:.grado/devflow/state.json > .grado/devflow/state.json
+          fi
       - name: Adapt GitHub event
         id: adapt
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          node tools/devflow/github-event.ts < "$GITHUB_EVENT_PATH" > "$RUNNER_TEMP/devflow-adapter.json"
+          event="$RUNNER_TEMP/devflow-event.json"
+          cp "$GITHUB_EVENT_PATH" "$event"
+          if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then
+            pr_number=$(jq -r '.workflow_run.pull_requests[0].number // empty' "$event")
+            if [ -n "$pr_number" ]; then
+              gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" --jq '{number,body,head_sha:.head.sha,merge_commit_sha}' > "$RUNNER_TEMP/devflow-pr.json"
+              jq --slurpfile pr "$RUNNER_TEMP/devflow-pr.json" '. + {devflow_pr: $pr[0]}' "$event" > "$RUNNER_TEMP/devflow-event-enriched.json"
+              event="$RUNNER_TEMP/devflow-event-enriched.json"
+            fi
+          fi
+          node tools/devflow/github-event.ts < "$event" > "$RUNNER_TEMP/devflow-adapter.json"
           cat "$RUNNER_TEMP/devflow-adapter.json"
           echo "kind=$(jq -r '.kind' "$RUNNER_TEMP/devflow-adapter.json")" >> "$GITHUB_OUTPUT"
       - name: Reconcile ResultEnvelope
