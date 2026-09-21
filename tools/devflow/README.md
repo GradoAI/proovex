@@ -31,3 +31,5 @@ Merged PRs provide merge evidence only. A successful `workflow_run` can produce 
 task contract, proof, and commit binding. GitHub Actions writes the resulting
 projection to the repo-native `devflow/state` branch; the StageSpec remains on
 `main` and the controller remains the only reconciliation authority.
+
+Sequential remote state validation marker.
