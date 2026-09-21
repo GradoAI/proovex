@@ -10,5 +10,8 @@ the controller contract.
 
 `reconcile` accepts one ResultEnvelope on stdin. An executor `COMPLETE` claim only
 moves a WorkPackage to `CLAIMED`; a proof needs an explicit passing
-`proof-validation` fact with non-empty `evidence_refs`. Review trigger behavior is
-intentionally deferred to DEV-WF-2.
+`proof-validation` fact with non-empty `evidence_refs`. The V2 trigger engine then
+evaluates key proof transitions, the configured work cluster, proposed CREATE
+abstractions, the max review gap, and the pre-exit gate. Once `DUE` or `BLOCKING`
+is reached it remains durable until a later review-checkpoint implementation
+provides an explicit reset.
