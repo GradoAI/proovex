@@ -2,3 +2,7 @@
 .env
 .env.*
 !.env.example
+
+# Local engineering workspace
+node_modules/
+.grado/devflow/*.tmp
