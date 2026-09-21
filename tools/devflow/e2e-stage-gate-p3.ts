@@ -1,1 +1,1 @@
-// Disposable GDW-STAGE-1 StageGate E2E probe for PVX-S1-P3. Never merge.\nexport const stageGateE2eP3 = true;\n
+// Disposable GDW-STAGE-1 StageGate E2E probe for PVX-S1-P3. Never merge.\nexport const stageGateE2eP3 = 'retry-after-reconcile-serialization';\n
