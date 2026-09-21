@@ -160,16 +160,12 @@
     }
   ],
   "review": {
-    "status": "DUE",
-    "reasons": [
-      "KEY_PROOF_OBLIGATION_SATISFIED:PVX-S1-P1",
-      "WORK_CLUSTER_COMPLETE:PVX-S1-CLUSTER",
-      "MANDATORY_PRE_EXIT"
-    ],
-    "completed_since_last_review": 2,
+    "status": "NOT_DUE",
+    "reasons": [],
+    "completed_since_last_review": 0,
     "facts": {
       "last_result_id": "github-workflow-run:35643157984",
-      "last_review_checkpoint": "review-checkpoint:bc31a9bc43017b97"
+      "last_review_checkpoint": "review-checkpoint:3ae667a877e19a3e"
     },
     "checkpoints": [
       {
@@ -180,6 +176,18 @@
           "MAX_REVIEW_GAP"
         ],
         "bound_last_result_id": "github-workflow-run:35642511874",
+        "stage_id": "PVX-STAGE-1"
+      },
+      {
+        "checkpoint_id": "review-checkpoint:3ae667a877e19a3e",
+        "packet_id": "alignment-review:c33702beb6248e94",
+        "decision": "CONTINUE",
+        "reviewed_reasons": [
+          "KEY_PROOF_OBLIGATION_SATISFIED:PVX-S1-P1",
+          "WORK_CLUSTER_COMPLETE:PVX-S1-CLUSTER",
+          "MANDATORY_PRE_EXIT"
+        ],
+        "bound_last_result_id": "github-workflow-run:35643157984",
         "stage_id": "PVX-STAGE-1"
       }
     ],
