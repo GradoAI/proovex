@@ -61,7 +61,8 @@ jobs:
         run: jq -c '.envelope' "$RUNNER_TEMP/devflow-adapter.json" | node tools/devflow/devflow.ts reconcile
       - name: Explain skipped reconciliation
         if: steps.adapt.outputs.kind == 'NO_RECONCILIATION'
-        run: jq -r '"NO_RECONCILIATION: " + .reason' "$RUNNER_TEMP/devflow-adapter.json"
+        run: |
+          jq -r '"NO_RECONCILIATION: " + .reason' "$RUNNER_TEMP/devflow-adapter.json"
       - name: Publish durable state projection
         if: steps.adapt.outputs.kind == 'RECONCILE'
         env:
