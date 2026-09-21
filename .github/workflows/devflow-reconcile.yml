@@ -77,9 +77,9 @@ jobs:
           else
             git init "$state_dir"
             git -C "$state_dir" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-            git -C "$state_dir" config user.name "github-actions[bot]"
-            git -C "$state_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           fi
+          git -C "$state_dir" config user.name "github-actions[bot]"
+          git -C "$state_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           find "$state_dir" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           mkdir -p "$state_dir/.grado/devflow"
           cp .grado/devflow/state.json "$state_dir/.grado/devflow/state.json"
