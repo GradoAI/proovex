@@ -14,6 +14,19 @@ on:
         description: Explicit ResultEnvelope JSON for recovery/testing
         required: false
         type: string
+      review_packet_id:
+        description: AlignmentReviewPacket ID for Human Review Decision
+        required: false
+        type: string
+      review_decision:
+        description: CONTINUE | CORRECTION_REQUIRED | TOP_LEVEL_DECISION_REQUIRED
+        required: false
+        type: string
+      devflow_test_only:
+        description: Route explicit review decision to fixed devflow/e2e-state
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: devflow-reconcile
@@ -36,6 +49,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run architecture
       - run: npm run build
+
       - name: Adapt GitHub event
         id: adapt
         env:
@@ -46,7 +60,7 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then
             pr_number=$(jq -r '.workflow_run.pull_requests[0].number // empty' "$event")
             if [ -n "$pr_number" ]; then
-              gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" --jq '{number,body,head_sha:.head.sha,merge_commit_sha}' > "$RUNNER_TEMP/devflow-pr.json"
+              gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr_number}" --jq '{number,body,head_sha:.head.sha,merge_commit_sha,merged,base_ref:.base.ref}' > "$RUNNER_TEMP/devflow-pr.json"
               jq --slurpfile pr "$RUNNER_TEMP/devflow-pr.json" '. + {devflow_pr: $pr[0]}' "$event" > "$RUNNER_TEMP/devflow-event-enriched.json"
               event="$RUNNER_TEMP/devflow-event-enriched.json"
             fi
@@ -55,6 +69,7 @@ jobs:
           cat "$RUNNER_TEMP/devflow-adapter.json"
           echo "kind=$(jq -r '.kind' "$RUNNER_TEMP/devflow-adapter.json")" >> "$GITHUB_OUTPUT"
           echo "state_target=$(jq -r '.state_target' "$RUNNER_TEMP/devflow-adapter.json")" >> "$GITHUB_OUTPUT"
+
       - name: Load latest durable state
         env:
           STATE_TARGET: ${{ steps.adapt.outputs.state_target }}
@@ -69,15 +84,22 @@ jobs:
           elif [ "$STATE_TARGET" = e2e ] && git fetch origin refs/heads/devflow/state:refs/remotes/origin/devflow/state; then
             git show refs/remotes/origin/devflow/state:.grado/devflow/state.json > .grado/devflow/state.json
           fi
+
       - name: Reconcile ResultEnvelope
         if: steps.adapt.outputs.kind == 'RECONCILE'
         run: jq -c '.envelope' "$RUNNER_TEMP/devflow-adapter.json" | node tools/devflow/devflow.ts reconcile
+
+      - name: Record Human Review Decision
+        if: steps.adapt.outputs.kind == 'REVIEW'
+        run: jq -c '.review' "$RUNNER_TEMP/devflow-adapter.json" | node tools/devflow/devflow.ts review-record
+
       - name: Explain skipped reconciliation
         if: steps.adapt.outputs.kind == 'NO_RECONCILIATION'
         run: |
           jq -r '"NO_RECONCILIATION: " + .reason' "$RUNNER_TEMP/devflow-adapter.json"
+
       - name: Publish durable state projection
-        if: steps.adapt.outputs.kind == 'RECONCILE'
+        if: steps.adapt.outputs.kind == 'RECONCILE' || steps.adapt.outputs.kind == 'REVIEW'
         env:
           GH_TOKEN: ${{ github.token }}
           STATE_TARGET: ${{ steps.adapt.outputs.state_target }}
@@ -102,5 +124,6 @@ jobs:
           git -C "$state_dir" add -A
           git -C "$state_dir" diff --cached --quiet || git -C "$state_dir" commit -m "chore(devflow): update durable state"
           git -C "$state_dir" push origin "HEAD:refs/heads/${state_branch}"
+
       - name: Show projection
         run: node tools/devflow/devflow.ts status --json

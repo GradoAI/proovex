@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "design_baseline": "GradoAI/ChatGPT-doc@d0aa8d3f180cde323e69d63eb8d8cf93484ad664",
+  "design_baseline": "GradoAI/ChatGPT-doc@910e291fa0ac2a312629c2dd5f5dddfec2227950",
   "stage": {
     "id": "PVX-STAGE-1",
     "name": "Prove Evidence",

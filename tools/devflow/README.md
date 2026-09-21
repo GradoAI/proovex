@@ -31,3 +31,46 @@ Merged PRs provide merge evidence only. A successful `workflow_run` can produce 
 task contract, proof, and commit binding. GitHub Actions writes the resulting
 projection to the repo-native `devflow/state` branch; the StageSpec remains on
 `main` and the controller remains the only reconciliation authority.
+
+
+## Governed review loop
+
+The controller now closes the repo-native review/gate loop without adding another authority:
+
+```text
+ResultEnvelope
+→ reconcile
+→ review trigger
+→ review-packet
+→ Human decision
+→ review-record
+→ durable ReviewCheckpoint
+→ status --json projection
+→ stage-gate-packet
+```
+
+Commands:
+
+```text
+devflow status --json
+devflow reconcile
+devflow review-packet
+devflow review-record
+devflow stage-gate-packet
+```
+
+`review-record` accepts:
+
+```json
+{"packet_id":"alignment-review:...","decision":"CONTINUE"}
+```
+
+Allowed decisions:
+
+- `CONTINUE`
+- `CORRECTION_REQUIRED`
+- `TOP_LEVEL_DECISION_REQUIRED`
+
+A StageGatePacket is read-only and can be generated only after all proof obligations are satisfied, accepted-artifact backlinks are present, and the mandatory pre-exit review has a durable `CONTINUE` checkpoint bound to the latest result. The controller never advances the Stage automatically.
+
+GitHub `workflow_dispatch` can record an explicit review decision. `devflow_test_only: true` routes only to the fixed `devflow/e2e-state` branch; canonical state remains fixed at `devflow/state`.
