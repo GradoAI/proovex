@@ -1,0 +1,133 @@
+import fs from 'node:fs';
+
+export interface ResultEnvelope {
+  schema_version: 1;
+  result_id: string;
+  task_contract_id?: string;
+  work_package_id: string;
+  claim: { status: 'IN_PROGRESS' | 'COMPLETE' | 'FAILED' };
+  validation_facts?: Array<{
+    type: string;
+    proof_id?: string;
+    passed?: boolean;
+    evidence_refs?: string[];
+  }>;
+  architecture_fit?: {
+    change: 'CREATE' | 'EXTEND' | 'NONE';
+    proposed_top_level_abstraction?: string;
+  };
+}
+
+export type AdapterOutput =
+  | { kind: 'RECONCILE'; envelope: ResultEnvelope }
+  | { kind: 'NO_RECONCILIATION'; reason: string };
+
+type JsonObject = Record<string, unknown>;
+
+const text = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
+
+function marker(body: string, name: string): string | undefined {
+  const line = body.split(/\r?\n/).find((candidate) => candidate.trim().startsWith(`${name}:`));
+  return line ? text(line.slice(name.length + 1)) : undefined;
+}
+
+function metadata(body: string): {
+  workPackageId: string;
+  taskContractId: string;
+  proofId: string;
+  architectureFit: ResultEnvelope['architecture_fit'];
+} | { error: string } {
+  const workPackageId = marker(body, 'DEVFLOW_WORK_PACKAGE');
+  const taskContractId = marker(body, 'DEVFLOW_TASK_CONTRACT');
+  const proofId = marker(body, 'DEVFLOW_PROOF');
+  const change = marker(body, 'ARCHITECTURE_CHANGE');
+  const proposed = marker(body, 'PROPOSED_TOP_LEVEL_ABSTRACTION');
+  if (!workPackageId || !/^WP-[A-Z0-9-]+$/.test(workPackageId)) return { error: 'missing or malformed DEVFLOW_WORK_PACKAGE' };
+  if (!taskContractId || !/^TC-[A-Z0-9-]+$/.test(taskContractId)) return { error: 'missing or malformed DEVFLOW_TASK_CONTRACT' };
+  if (!proofId || !/^PVX-S\d+-P\d+$/.test(proofId)) return { error: 'missing or malformed DEVFLOW_PROOF' };
+  if (!change || !['CREATE', 'EXTEND', 'NONE'].includes(change)) return { error: 'missing or malformed ARCHITECTURE_CHANGE' };
+  if (change === 'CREATE' && !proposed) return { error: 'CREATE requires PROPOSED_TOP_LEVEL_ABSTRACTION' };
+  return { workPackageId, taskContractId, proofId, architectureFit: { change: change as 'CREATE' | 'EXTEND' | 'NONE', ...(proposed ? { proposed_top_level_abstraction: proposed } : {}) } };
+}
+
+function prEvent(event: JsonObject): AdapterOutput {
+  const pr = event.pull_request as JsonObject | undefined;
+  if (!pr || event.action !== 'closed') return { kind: 'NO_RECONCILIATION', reason: 'unsupported pull_request event' };
+  if (pr.merged !== true) return { kind: 'NO_RECONCILIATION', reason: 'pull request was not merged' };
+  const parsed = metadata(text(pr.body) ?? '');
+  if ('error' in parsed) return { kind: 'NO_RECONCILIATION', reason: parsed.error };
+  const number = pr.number ?? event.number;
+  const mergeSha = text(pr.merge_commit_sha) ?? text((pr.head as JsonObject | undefined)?.sha);
+  if (typeof number !== 'number' || !mergeSha) return { kind: 'NO_RECONCILIATION', reason: 'missing pull request identity' };
+  return {
+    kind: 'RECONCILE',
+    envelope: {
+      schema_version: 1,
+      result_id: `github-pr:${number}:merge:${mergeSha}`,
+      task_contract_id: parsed.taskContractId,
+      work_package_id: parsed.workPackageId,
+      claim: { status: 'COMPLETE' },
+      ...(parsed.architectureFit ? { architecture_fit: parsed.architectureFit } : {}),
+      validation_facts: [{ type: 'github-pr-merged', proof_id: parsed.proofId, passed: true, evidence_refs: [`github-pr:${number}`, `git:${mergeSha}`] }],
+    },
+  };
+}
+
+function workflowRun(event: JsonObject): AdapterOutput {
+  const run = event.workflow_run as JsonObject | undefined;
+  if (!run || event.action !== 'completed') return { kind: 'NO_RECONCILIATION', reason: 'unsupported workflow_run event' };
+  if (run.conclusion !== 'success') return { kind: 'NO_RECONCILIATION', reason: 'workflow did not pass' };
+  const binding = run.devflow as JsonObject | undefined;
+  const wp = text(binding?.work_package_id);
+  const tc = text(binding?.task_contract_id);
+  const proof = text(binding?.proof_id);
+  const sha = text(run.head_sha);
+  const id = run.id;
+  if (!wp || !tc || !proof || !sha || (typeof id !== 'number' && typeof id !== 'string')) return { kind: 'NO_RECONCILIATION', reason: 'workflow run lacks explicit DevFlow binding' };
+  return {
+    kind: 'RECONCILE',
+    envelope: {
+      schema_version: 1,
+      result_id: `github-workflow-run:${id}`,
+      task_contract_id: tc,
+      work_package_id: wp,
+      claim: { status: 'COMPLETE' },
+      validation_facts: [{ type: 'proof-validation', proof_id: proof, passed: true, evidence_refs: [`github-workflow-run:${id}`, `git:${sha}`] }],
+    },
+  };
+}
+
+function dispatch(event: JsonObject): AdapterOutput {
+  const inputs = (event.inputs ?? {}) as JsonObject;
+  const raw = text(inputs.result_envelope) ?? text(event.result_envelope);
+  if (raw) {
+    try {
+      const envelope = JSON.parse(raw) as ResultEnvelope;
+      if (envelope.schema_version !== 1 || !envelope.result_id || !envelope.work_package_id || !envelope.claim) return { kind: 'NO_RECONCILIATION', reason: 'invalid explicit ResultEnvelope' };
+      return { kind: 'RECONCILE', envelope };
+    } catch {
+      return { kind: 'NO_RECONCILIATION', reason: 'invalid explicit ResultEnvelope JSON' };
+    }
+  }
+  return { kind: 'NO_RECONCILIATION', reason: 'workflow_dispatch requires result_envelope input' };
+}
+
+export function adaptGithubEvent(event: unknown): AdapterOutput {
+  if (!event || typeof event !== 'object') return { kind: 'NO_RECONCILIATION', reason: 'invalid event payload' };
+  const payload = event as JsonObject;
+  if (payload.pull_request) return prEvent(payload);
+  if (payload.workflow_run) return workflowRun(payload);
+  if (payload.inputs || payload.result_envelope) return dispatch(payload);
+  return { kind: 'NO_RECONCILIATION', reason: 'unsupported GitHub event' };
+}
+
+if (process.argv[1] && process.argv[1].endsWith('github-event.ts')) {
+  const input = fs.readFileSync(0, 'utf8');
+  try {
+    process.stdout.write(`${JSON.stringify(adaptGithubEvent(JSON.parse(input)))}\n`);
+  } catch (error) {
+    process.stdout.write(`${JSON.stringify({ kind: 'NO_RECONCILIATION', reason: error instanceof Error ? error.message : String(error) })}\n`);
+    process.exitCode = 0;
+  }
+}

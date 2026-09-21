@@ -2,10 +2,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const ROOT = path.resolve(import.meta.dirname, "../..");
+const ROOT = path.resolve(process.env.DEVFLOW_ROOT ?? path.resolve(import.meta.dirname, "../.."));
 const DIR = path.join(ROOT, ".grado", "devflow");
 const STAGE_FILE = path.join(DIR, "stage.yaml");
-const STATE_FILE = path.join(DIR, "state.json");
+const STATE_FILE = path.resolve(process.env.DEVFLOW_STATE_FILE ?? path.join(DIR, "state.json"));
 const VALIDATION_STATES = new Set(["UNPROVEN", "SATISFIED"]);
 const WORK_STATES = new Set(["READY", "CLAIMED", "VALIDATED", "COMPLETE"]);
 

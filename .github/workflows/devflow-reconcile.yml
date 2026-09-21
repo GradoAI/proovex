@@ -7,12 +7,21 @@ on:
     workflows: [CI]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      result_envelope:
+        description: Explicit ResultEnvelope JSON for recovery/testing
+        required: false
+        type: string
+
+concurrency:
+  group: devflow-reconcile
+  cancel-in-progress: false
 
 jobs:
   reconcile:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,4 +33,37 @@ jobs:
       - run: npm run typecheck
       - run: npm run architecture
       - run: npm run build
-      - run: node tools/devflow/devflow.ts status --json
+      - name: Adapt GitHub event
+        id: adapt
+        run: |
+          node tools/devflow/github-event.ts < "$GITHUB_EVENT_PATH" > "$RUNNER_TEMP/devflow-adapter.json"
+          cat "$RUNNER_TEMP/devflow-adapter.json"
+          echo "kind=$(jq -r '.kind' "$RUNNER_TEMP/devflow-adapter.json")" >> "$GITHUB_OUTPUT"
+      - name: Reconcile ResultEnvelope
+        if: steps.adapt.outputs.kind == 'RECONCILE'
+        run: jq -c '.envelope' "$RUNNER_TEMP/devflow-adapter.json" | node tools/devflow/devflow.ts reconcile
+      - name: Explain skipped reconciliation
+        if: steps.adapt.outputs.kind == 'NO_RECONCILIATION'
+        run: jq -r '"NO_RECONCILIATION: " + .reason' "$RUNNER_TEMP/devflow-adapter.json"
+      - name: Publish durable state projection
+        if: steps.adapt.outputs.kind == 'RECONCILE'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state_dir="$RUNNER_TEMP/devflow-state"
+          if git fetch origin refs/heads/devflow/state:refs/remotes/origin/devflow/state; then
+            git worktree add --detach "$state_dir" refs/remotes/origin/devflow/state
+          else
+            git init "$state_dir"
+            git -C "$state_dir" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            git -C "$state_dir" config user.name "github-actions[bot]"
+            git -C "$state_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          fi
+          find "$state_dir" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          mkdir -p "$state_dir/.grado/devflow"
+          cp .grado/devflow/state.json "$state_dir/.grado/devflow/state.json"
+          git -C "$state_dir" add -A
+          git -C "$state_dir" diff --cached --quiet || git -C "$state_dir" commit -m "chore(devflow): update durable state"
+          git -C "$state_dir" push origin HEAD:refs/heads/devflow/state
+      - name: Show projection
+        run: node tools/devflow/devflow.ts status --json

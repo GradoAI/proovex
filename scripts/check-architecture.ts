@@ -83,34 +83,35 @@ function layerOfPackage(name: string): Layer | undefined {
 }
 
 function packageRoot(file: string): string | undefined {
-  const match = /^(proovex\/(?:packages|apps)\/[^/]+)\//.exec(file);
-  return match?.[1];
+  const match = /^(?:packages|apps)\/[^/]+\//.exec(file);
+  return match ? match[0].slice(0, -1) : undefined;
 }
 
 function classify(
   file: string,
 ): 'fixture' | 'config' | 'forbidden-source' | 'test' | 'script' | 'production' | 'unclassified' {
-  if (file.startsWith('proovex/architecture/fixtures/')) return 'fixture';
-  if (/^proovex\/(package\.json|package-lock\.json|tsconfig\.json|biome\.json|\.nvmrc|\.gitignore)$/.test(file))
+  if (file.startsWith('architecture/fixtures/')) return 'fixture';
+  if (/^(package\.json|package-lock\.json|tsconfig\.json|biome\.json|\.nvmrc|\.gitignore)$/.test(file))
     return 'config';
-  if (/^proovex\/\.grado\/devflow\/.+\.(yaml|json|md)$/.test(file)) return 'config';
-  if (/^proovex\/(packages|apps)\/[^/]+\/package\.json$/.test(file)) return 'config';
-  if (/^proovex\/architecture\/[^/]+\.json$/.test(file)) return 'config';
+  if (/^\.grado\/devflow\/.+\.(yaml|json|md)$/.test(file)) return 'config';
+  if (/^(packages|apps)\/[^/]+\/package\.json$/.test(file)) return 'config';
+  if (/^architecture\/[^/]+\.json$/.test(file)) return 'config';
+  if (/^(?:README(?:\.zh-CN)?\.md|VISION\.md|ROADMAP\.md|LICENSE|assets\/)/.test(file)) return 'config';
   if (
     /\.(js|mjs|cjs|jsx)$/.test(file) ||
-    (file.endsWith('.tsx') && !file.startsWith('proovex/apps/console/'))
+    (file.endsWith('.tsx') && !file.startsWith('apps/console/'))
   )
     return 'forbidden-source';
   if (
-    /^proovex\/(packages|apps)\/[^/]+\/test\/.+\.ts$/.test(file) ||
-    /^proovex\/test\/.+\.ts$/.test(file)
+    /^(packages|apps)\/[^/]+\/test\/.+\.ts$/.test(file) ||
+    /^test\/.+\.ts$/.test(file)
   )
     return 'test';
-  if (/^proovex\/scripts\/.+\.ts$/.test(file)) return 'script';
-  if (/^proovex\/tools\/devflow\/README\.md$/.test(file)) return 'config';
-  if (/^proovex\/tools\/devflow\/devflow\.test\.ts$/.test(file)) return 'test';
-  if (/^proovex\/tools\/devflow\/devflow\.ts$/.test(file)) return 'script';
-  if (/^proovex\/\.github\/workflows\/.+\.ya?ml$/.test(file)) return 'config';
+  if (/^scripts\/.+\.ts$/.test(file)) return 'script';
+  if (/^tools\/devflow\/README\.md$/.test(file)) return 'config';
+  if (/^tools\/devflow\/devflow\.test\.ts$/.test(file)) return 'test';
+  if (/^tools\/devflow\/.+\.ts$/.test(file)) return 'script';
+  if (/^\.github\/workflows\/.+\.ya?ml$/.test(file)) return 'config';
   if (file.endsWith('.ts') && layerOfPath(file)) return 'production';
   return 'unclassified';
 }
@@ -156,7 +157,7 @@ function edgeViolation(file: string, layer: Layer, specifier: string): string | 
   const core = layer.tier === 'core';
   if (specifier.startsWith('.')) {
     const target = posix.normalize(posix.join(posix.dirname(file), specifier));
-    if (!target.startsWith('proovex/')) return core ? 'ARCH-CORE-DEPENDENCY' : undefined;
+    if (!target.startsWith('packages/') && !target.startsWith('apps/')) return core ? 'ARCH-CORE-DEPENDENCY' : undefined;
     const targetLayer = layerOfPath(target);
     if (!targetLayer || packageRoot(target) === packageRoot(file)) return undefined;
     if (targetLayer.name !== layer.name && !layer.allowed_layers.includes(targetLayer.name)) {
@@ -179,9 +180,13 @@ function edgeViolation(file: string, layer: Layer, specifier: string): string | 
 }
 
 export function checkArchitecture(root: string): CheckResult {
+  const actualRoot = statSync(join(root, 'packages'), { throwIfNoEntry: false })?.isDirectory()
+    ? root
+    : statSync(join(root, 'proovex'), { throwIfNoEntry: false })?.isDirectory()
+      ? join(root, 'proovex')
+      : root;
   const files: string[] = [];
-  if (statSync(join(root, 'proovex'), { throwIfNoEntry: false })?.isDirectory())
-    walk(root, 'proovex', files);
+  walk(actualRoot, '', files);
   const violations: Violation[] = [];
   for (const file of files.sort()) {
     const kind = classify(file);
@@ -189,7 +194,7 @@ export function checkArchitecture(root: string): CheckResult {
     else if (kind === 'unclassified') violations.push({ rule: 'ARCH-UNCLASSIFIED', file });
     else if (kind === 'production') {
       const layer = layerOfPath(file) as Layer;
-      for (const specifier of specifiers(file, readFileSync(join(root, file), 'utf8'))) {
+      for (const specifier of specifiers(file, readFileSync(join(actualRoot, file), 'utf8'))) {
         const rule = edgeViolation(file, layer, specifier);
         if (rule) violations.push({ rule, file, specifier });
       }
@@ -205,7 +210,7 @@ export function checkArchitecture(root: string): CheckResult {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = resolve(
-    process.argv[2] ?? join(dirname(fileURLToPath(import.meta.url)), '..', '..'),
+    process.argv[2] ?? join(dirname(fileURLToPath(import.meta.url)), '..'),
   );
   const result = checkArchitecture(root);
   process.stdout.write(
