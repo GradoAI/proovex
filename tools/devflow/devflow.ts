@@ -26,7 +26,7 @@ interface WorkPackage { id: string; proof_id: string; task_contract_id: string; 
 interface ReconciliationResult { result_id: string; task_contract_id: string; work_package_id: string; claim_status: ClaimStatus; validation_applied: boolean; }
 interface ReviewState { status: ReviewStatus; reasons: string[]; completed_since_last_review: number; facts: { last_result_id: string | null; last_review_checkpoint: string | null }; }
 interface DurableState { schema_version: number; stage_id: string; proof_obligations: Record<string, ProofState>; task_contracts: Record<string, TaskContract>; work_packages: Record<string, WorkPackage>; results: ReconciliationResult[]; review: ReviewState; }
-interface ValidationFact { type: string; proof_id?: string; passed?: boolean; evidence_refs?: string[]; }
+interface ValidationFact { type: string; proof_id?: string; passed?: boolean; evidence_refs?: string[]; accepted_artifact_ref?: string; }
 interface ResultEnvelope { schema_version: number; result_id: string; task_contract_id?: string; work_package_id: string; claim: { status: ClaimStatus }; validation_facts?: ValidationFact[]; architecture_fit?: ArchitectureFit; }
 
 function fail(message: string): void { console.error(`devflow: ${message}`); process.exitCode = 1; }
@@ -72,7 +72,10 @@ function reconcile(input: ResultEnvelope): Record<string, unknown> {
   if (!["IN_PROGRESS", "COMPLETE", "FAILED"].includes(input.claim.status)) throw new Error("invalid executor claim status");
   if (wp.state === "COMPLETE" || wp.state === "VALIDATED") throw new Error(`invalid state transition from ${wp.state}`);
   const previousProof = state.proof_obligations[wp.proof_id] ?? "UNPROVEN"; wp.state = input.claim.status === "FAILED" ? "READY" : "CLAIMED";
-  const validated = (input.validation_facts ?? []).some((f) => f.type === "proof-validation" && f.proof_id === wp.proof_id && f.passed === true && (f.evidence_refs?.length ?? 0) > 0);
+  for (const fact of input.validation_facts ?? []) {
+    if (fact.type === "proof-validation" && fact.passed === true && fact.accepted_artifact_ref && !(fact.evidence_refs ?? []).includes(fact.accepted_artifact_ref)) throw new Error("proof-validation artifact binding mismatch");
+  }
+  const validated = (input.validation_facts ?? []).some((f) => f.type === "proof-validation" && f.proof_id === wp.proof_id && f.passed === true && (f.evidence_refs?.length ?? 0) > 0 && typeof f.accepted_artifact_ref === "string" && f.accepted_artifact_ref.length > 0 && f.evidence_refs?.includes(f.accepted_artifact_ref));
   if (validated) { wp.state = "VALIDATED"; state.proof_obligations[wp.proof_id] = "SATISFIED"; state.review.completed_since_last_review += 1; }
   state.results.push({ result_id: input.result_id, task_contract_id: wp.task_contract_id, work_package_id: wp.id, claim_status: input.claim.status, validation_applied: validated }); state.review.facts.last_result_id = input.result_id;
   reviewTriggerEngine(stage, state, previousProof, wp, input, validated); writeJson(STATE_FILE, state); return projection(stage, state);

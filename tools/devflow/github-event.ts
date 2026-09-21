@@ -11,6 +11,7 @@ export interface ResultEnvelope {
     proof_id?: string;
     passed?: boolean;
     evidence_refs?: string[];
+    accepted_artifact_ref?: string;
   }>;
   architecture_fit?: {
     change: 'CREATE' | 'EXTEND' | 'NONE';
@@ -19,8 +20,8 @@ export interface ResultEnvelope {
 }
 
 export type AdapterOutput =
-  | { kind: 'RECONCILE'; envelope: ResultEnvelope }
-  | { kind: 'NO_RECONCILIATION'; reason: string };
+  | { kind: 'RECONCILE'; state_target: 'canonical' | 'e2e'; envelope: ResultEnvelope }
+  | { kind: 'NO_RECONCILIATION'; state_target: 'canonical' | 'e2e'; reason: string };
 
 type JsonObject = Record<string, unknown>;
 
@@ -36,6 +37,7 @@ function metadata(body: string): {
   workPackageId: string;
   taskContractId: string;
   proofId: string;
+  testOnly: boolean;
   architectureFit: ResultEnvelope['architecture_fit'];
 } | { error: string } {
   const workPackageId = marker(body, 'DEVFLOW_WORK_PACKAGE');
@@ -43,25 +45,31 @@ function metadata(body: string): {
   const proofId = marker(body, 'DEVFLOW_PROOF');
   const change = marker(body, 'ARCHITECTURE_CHANGE');
   const proposed = marker(body, 'PROPOSED_TOP_LEVEL_ABSTRACTION');
+  const testOnlyMarker = marker(body, 'DEVFLOW_TEST_ONLY');
   if (!workPackageId || !/^WP-[A-Z0-9-]+$/.test(workPackageId)) return { error: 'missing or malformed DEVFLOW_WORK_PACKAGE' };
   if (!taskContractId || !/^TC-[A-Z0-9-]+$/.test(taskContractId)) return { error: 'missing or malformed DEVFLOW_TASK_CONTRACT' };
   if (!proofId || !/^PVX-S\d+-P\d+$/.test(proofId)) return { error: 'missing or malformed DEVFLOW_PROOF' };
   if (!change || !['CREATE', 'EXTEND', 'NONE'].includes(change)) return { error: 'missing or malformed ARCHITECTURE_CHANGE' };
   if (change === 'CREATE' && !proposed) return { error: 'CREATE requires PROPOSED_TOP_LEVEL_ABSTRACTION' };
-  return { workPackageId, taskContractId, proofId, architectureFit: { change: change as 'CREATE' | 'EXTEND' | 'NONE', ...(proposed ? { proposed_top_level_abstraction: proposed } : {}) } };
+  if (testOnlyMarker && testOnlyMarker !== 'true' && testOnlyMarker !== 'false') return { error: 'DEVFLOW_TEST_ONLY must be true or false' };
+  return { workPackageId, taskContractId, proofId, testOnly: testOnlyMarker === 'true', architectureFit: { change: change as 'CREATE' | 'EXTEND' | 'NONE', ...(proposed ? { proposed_top_level_abstraction: proposed } : {}) } };
 }
+
+const noReconciliation = (reason: string, state_target: 'canonical' | 'e2e' = 'canonical'): AdapterOutput => ({ kind: 'NO_RECONCILIATION', state_target, reason });
 
 function prEvent(event: JsonObject): AdapterOutput {
   const pr = event.pull_request as JsonObject | undefined;
-  if (!pr || event.action !== 'closed') return { kind: 'NO_RECONCILIATION', reason: 'unsupported pull_request event' };
-  if (pr.merged !== true) return { kind: 'NO_RECONCILIATION', reason: 'pull request was not merged' };
+  if (!pr || event.action !== 'closed') return noReconciliation('unsupported pull_request event');
+  if (pr.merged !== true) return noReconciliation('pull request was not merged');
   const parsed = metadata(text(pr.body) ?? '');
-  if ('error' in parsed) return { kind: 'NO_RECONCILIATION', reason: parsed.error };
+  if ('error' in parsed) return noReconciliation(parsed.error);
+  if (!text(pr.base_ref) || text(pr.base_ref) !== 'main') return noReconciliation('pull request target is not canonical main', parsed.testOnly ? 'e2e' : 'canonical');
   const number = pr.number ?? event.number;
   const mergeSha = text(pr.merge_commit_sha) ?? text((pr.head as JsonObject | undefined)?.sha);
-  if (typeof number !== 'number' || !mergeSha) return { kind: 'NO_RECONCILIATION', reason: 'missing pull request identity' };
+  if (typeof number !== 'number' || !mergeSha) return noReconciliation('missing pull request identity', parsed.testOnly ? 'e2e' : 'canonical');
   return {
     kind: 'RECONCILE',
+    state_target: parsed.testOnly ? 'e2e' : 'canonical',
     envelope: {
       schema_version: 1,
       result_id: `github-pr:${number}:merge:${mergeSha}`,
@@ -76,20 +84,23 @@ function prEvent(event: JsonObject): AdapterOutput {
 
 function workflowRun(event: JsonObject): AdapterOutput {
   const run = event.workflow_run as JsonObject | undefined;
-  if (!run || event.action !== 'completed') return { kind: 'NO_RECONCILIATION', reason: 'unsupported workflow_run event' };
-  if (run.conclusion !== 'success') return { kind: 'NO_RECONCILIATION', reason: 'workflow did not pass' };
+  if (!run || event.action !== 'completed') return noReconciliation('unsupported workflow_run event');
+  if (run.conclusion !== 'success') return noReconciliation('workflow did not pass');
   const pr = event.devflow_pr as JsonObject | undefined;
   const parsed = metadata(text(pr?.body) ?? '');
-  if ('error' in parsed) return { kind: 'NO_RECONCILIATION', reason: `associated PR: ${parsed.error}` };
+  if ('error' in parsed) return noReconciliation(`associated PR: ${parsed.error}`);
   const wp = parsed.workPackageId;
   const tc = parsed.taskContractId;
   const proof = parsed.proofId;
   const sha = text(run.head_sha);
   const boundSha = text(pr?.head_sha) ?? text(pr?.merge_commit_sha);
   const id = run.id;
-  if (!pr || !sha || !boundSha || sha !== boundSha || (typeof id !== 'number' && typeof id !== 'string')) return { kind: 'NO_RECONCILIATION', reason: 'workflow run lacks matching associated PR binding' };
+  if (!pr || !sha || !boundSha || sha !== boundSha || (typeof id !== 'number' && typeof id !== 'string')) return noReconciliation('workflow run lacks matching associated PR binding', parsed.testOnly ? 'e2e' : 'canonical');
+  const testOnly = parsed.testOnly;
+  if (!testOnly && (pr.merged !== true || text(pr.base_ref) !== 'main' || text(pr.merge_commit_sha) !== sha)) return noReconciliation('canonical proof requires merged PR accepted into main');
   return {
     kind: 'RECONCILE',
+    state_target: testOnly ? 'e2e' : 'canonical',
     envelope: {
       schema_version: 1,
       result_id: `github-workflow-run:${id}`,
@@ -97,7 +108,7 @@ function workflowRun(event: JsonObject): AdapterOutput {
       work_package_id: wp,
       claim: { status: 'COMPLETE' },
       ...(parsed.architectureFit ? { architecture_fit: parsed.architectureFit } : {}),
-      validation_facts: [{ type: 'proof-validation', proof_id: proof, passed: true, evidence_refs: [`github-workflow-run:${id}`, `github-pr:${pr.number ?? 'unknown'}`, `git:${sha}`] }],
+      validation_facts: [{ type: 'proof-validation', proof_id: proof, passed: true, evidence_refs: [`github-workflow-run:${id}`, `github-pr:${pr.number ?? 'unknown'}`, `git:${sha}`], accepted_artifact_ref: `git:${sha}` }],
     },
   };
 }
@@ -108,22 +119,22 @@ function dispatch(event: JsonObject): AdapterOutput {
   if (raw) {
     try {
       const envelope = JSON.parse(raw) as ResultEnvelope;
-      if (envelope.schema_version !== 1 || !envelope.result_id || !envelope.work_package_id || !envelope.claim) return { kind: 'NO_RECONCILIATION', reason: 'invalid explicit ResultEnvelope' };
-      return { kind: 'RECONCILE', envelope };
+      if (envelope.schema_version !== 1 || !envelope.result_id || !envelope.work_package_id || !envelope.claim) return noReconciliation('invalid explicit ResultEnvelope');
+      return { kind: 'RECONCILE', state_target: 'canonical', envelope };
     } catch {
-      return { kind: 'NO_RECONCILIATION', reason: 'invalid explicit ResultEnvelope JSON' };
+      return noReconciliation('invalid explicit ResultEnvelope JSON');
     }
   }
-  return { kind: 'NO_RECONCILIATION', reason: 'workflow_dispatch requires result_envelope input' };
+  return noReconciliation('workflow_dispatch requires result_envelope input');
 }
 
 export function adaptGithubEvent(event: unknown): AdapterOutput {
-  if (!event || typeof event !== 'object') return { kind: 'NO_RECONCILIATION', reason: 'invalid event payload' };
+  if (!event || typeof event !== 'object') return noReconciliation('invalid event payload');
   const payload = event as JsonObject;
   if (payload.pull_request) return prEvent(payload);
   if (payload.workflow_run) return workflowRun(payload);
   if (payload.inputs || payload.result_envelope) return dispatch(payload);
-  return { kind: 'NO_RECONCILIATION', reason: 'unsupported GitHub event' };
+  return noReconciliation('unsupported GitHub event');
 }
 
 if (process.argv[1] && process.argv[1].endsWith('github-event.ts')) {
@@ -131,7 +142,7 @@ if (process.argv[1] && process.argv[1].endsWith('github-event.ts')) {
   try {
     process.stdout.write(`${JSON.stringify(adaptGithubEvent(JSON.parse(input)))}\n`);
   } catch (error) {
-    process.stdout.write(`${JSON.stringify({ kind: 'NO_RECONCILIATION', reason: error instanceof Error ? error.message : String(error) })}\n`);
+    process.stdout.write(`${JSON.stringify(noReconciliation(error instanceof Error ? error.message : String(error)))}\n`);
     process.exitCode = 0;
   }
 }

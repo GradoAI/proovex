@@ -36,11 +36,6 @@ jobs:
       - run: npm run typecheck
       - run: npm run architecture
       - run: npm run build
-      - name: Load latest durable state
-        run: |
-          if git fetch origin refs/heads/devflow/state:refs/remotes/origin/devflow/state; then
-            git show refs/remotes/origin/devflow/state:.grado/devflow/state.json > .grado/devflow/state.json
-          fi
       - name: Adapt GitHub event
         id: adapt
         env:
@@ -59,6 +54,19 @@ jobs:
           node tools/devflow/github-event.ts < "$event" > "$RUNNER_TEMP/devflow-adapter.json"
           cat "$RUNNER_TEMP/devflow-adapter.json"
           echo "kind=$(jq -r '.kind' "$RUNNER_TEMP/devflow-adapter.json")" >> "$GITHUB_OUTPUT"
+          echo "state_target=$(jq -r '.state_target' "$RUNNER_TEMP/devflow-adapter.json")" >> "$GITHUB_OUTPUT"
+      - name: Load latest durable state
+        env:
+          STATE_TARGET: ${{ steps.adapt.outputs.state_target }}
+        run: |
+          case "$STATE_TARGET" in
+            canonical) state_branch='devflow/state' ;;
+            e2e) state_branch='devflow/e2e-state' ;;
+            *) echo "invalid state target" >&2; exit 1 ;;
+          esac
+          if git fetch origin "refs/heads/${state_branch}:refs/remotes/origin/${state_branch}"; then
+            git show "refs/remotes/origin/${state_branch}:.grado/devflow/state.json" > .grado/devflow/state.json
+          fi
       - name: Reconcile ResultEnvelope
         if: steps.adapt.outputs.kind == 'RECONCILE'
         run: jq -c '.envelope' "$RUNNER_TEMP/devflow-adapter.json" | node tools/devflow/devflow.ts reconcile
@@ -70,10 +78,16 @@ jobs:
         if: steps.adapt.outputs.kind == 'RECONCILE'
         env:
           GH_TOKEN: ${{ github.token }}
+          STATE_TARGET: ${{ steps.adapt.outputs.state_target }}
         run: |
+          case "$STATE_TARGET" in
+            canonical) state_branch='devflow/state' ;;
+            e2e) state_branch='devflow/e2e-state' ;;
+            *) echo "invalid state target" >&2; exit 1 ;;
+          esac
           state_dir="$RUNNER_TEMP/devflow-state"
-          if git fetch origin refs/heads/devflow/state:refs/remotes/origin/devflow/state; then
-            git worktree add --detach "$state_dir" refs/remotes/origin/devflow/state
+          if git fetch origin "refs/heads/${state_branch}:refs/remotes/origin/${state_branch}"; then
+            git worktree add --detach "$state_dir" "refs/remotes/origin/${state_branch}"
           else
             git init "$state_dir"
             git -C "$state_dir" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
@@ -85,6 +99,6 @@ jobs:
           cp .grado/devflow/state.json "$state_dir/.grado/devflow/state.json"
           git -C "$state_dir" add -A
           git -C "$state_dir" diff --cached --quiet || git -C "$state_dir" commit -m "chore(devflow): update durable state"
-          git -C "$state_dir" push origin HEAD:refs/heads/devflow/state
+          git -C "$state_dir" push origin "HEAD:refs/heads/${state_branch}"
       - name: Show projection
         run: node tools/devflow/devflow.ts status --json
