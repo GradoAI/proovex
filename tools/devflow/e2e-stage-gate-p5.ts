@@ -1,0 +1,1 @@
+// Disposable GDW-STAGE-1 StageGate E2E probe for PVX-S1-P5. Never merge.\nexport const stageGateE2eP5 = true;\n
