@@ -78,13 +78,16 @@ function workflowRun(event: JsonObject): AdapterOutput {
   const run = event.workflow_run as JsonObject | undefined;
   if (!run || event.action !== 'completed') return { kind: 'NO_RECONCILIATION', reason: 'unsupported workflow_run event' };
   if (run.conclusion !== 'success') return { kind: 'NO_RECONCILIATION', reason: 'workflow did not pass' };
-  const binding = run.devflow as JsonObject | undefined;
-  const wp = text(binding?.work_package_id);
-  const tc = text(binding?.task_contract_id);
-  const proof = text(binding?.proof_id);
+  const pr = event.devflow_pr as JsonObject | undefined;
+  const parsed = metadata(text(pr?.body) ?? '');
+  if ('error' in parsed) return { kind: 'NO_RECONCILIATION', reason: `associated PR: ${parsed.error}` };
+  const wp = parsed.workPackageId;
+  const tc = parsed.taskContractId;
+  const proof = parsed.proofId;
   const sha = text(run.head_sha);
+  const boundSha = text(pr?.head_sha) ?? text(pr?.merge_commit_sha);
   const id = run.id;
-  if (!wp || !tc || !proof || !sha || (typeof id !== 'number' && typeof id !== 'string')) return { kind: 'NO_RECONCILIATION', reason: 'workflow run lacks explicit DevFlow binding' };
+  if (!pr || !sha || !boundSha || sha !== boundSha || (typeof id !== 'number' && typeof id !== 'string')) return { kind: 'NO_RECONCILIATION', reason: 'workflow run lacks matching associated PR binding' };
   return {
     kind: 'RECONCILE',
     envelope: {
@@ -93,7 +96,8 @@ function workflowRun(event: JsonObject): AdapterOutput {
       task_contract_id: tc,
       work_package_id: wp,
       claim: { status: 'COMPLETE' },
-      validation_facts: [{ type: 'proof-validation', proof_id: proof, passed: true, evidence_refs: [`github-workflow-run:${id}`, `git:${sha}`] }],
+      ...(parsed.architectureFit ? { architecture_fit: parsed.architectureFit } : {}),
+      validation_facts: [{ type: 'proof-validation', proof_id: proof, passed: true, evidence_refs: [`github-workflow-run:${id}`, `github-pr:${pr.number ?? 'unknown'}`, `git:${sha}`] }],
     },
   };
 }
