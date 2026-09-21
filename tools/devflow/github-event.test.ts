@@ -93,3 +93,17 @@ test('sequential durable events load the prior projection before reconciling', (
   assert.equal(status.proof_obligations.find((proof) => proof.id === 'PVX-S1-P2')?.state, 'SATISFIED');
   assert.equal(status.proof_obligations.find((proof) => proof.id === 'PVX-S1-P3')?.state, 'SATISFIED');
 });
+
+
+test('workflow dispatch supports explicit review decision with fixed state target', () => {
+  const canonical = adaptGithubEvent({ inputs: { review_packet_id: 'alignment-review:abc', review_decision: 'CONTINUE' } });
+  assert.equal(canonical.kind, 'REVIEW');
+  if (canonical.kind === 'REVIEW') {
+    assert.equal(canonical.state_target, 'canonical');
+    assert.equal(canonical.review.decision, 'CONTINUE');
+  }
+  const e2e = adaptGithubEvent({ inputs: { review_packet_id: 'alignment-review:def', review_decision: 'CORRECTION_REQUIRED', devflow_test_only: true } });
+  assert.equal(e2e.kind, 'REVIEW');
+  if (e2e.kind === 'REVIEW') assert.equal(e2e.state_target, 'e2e');
+  assert.equal(adaptGithubEvent({ inputs: { review_packet_id: 'x', review_decision: 'BAD' } }).kind, 'NO_RECONCILIATION');
+});

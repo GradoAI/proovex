@@ -19,8 +19,11 @@ export interface ResultEnvelope {
   };
 }
 
+export type ReviewDecision = 'CONTINUE' | 'CORRECTION_REQUIRED' | 'TOP_LEVEL_DECISION_REQUIRED';
+
 export type AdapterOutput =
   | { kind: 'RECONCILE'; state_target: 'canonical' | 'e2e'; envelope: ResultEnvelope }
+  | { kind: 'REVIEW'; state_target: 'canonical' | 'e2e'; review: { packet_id: string; decision: ReviewDecision } }
   | { kind: 'NO_RECONCILIATION'; state_target: 'canonical' | 'e2e'; reason: string };
 
 type JsonObject = Record<string, unknown>;
@@ -52,10 +55,23 @@ function metadata(body: string): {
   if (!change || !['CREATE', 'EXTEND', 'NONE'].includes(change)) return { error: 'missing or malformed ARCHITECTURE_CHANGE' };
   if (change === 'CREATE' && !proposed) return { error: 'CREATE requires PROPOSED_TOP_LEVEL_ABSTRACTION' };
   if (testOnlyMarker && testOnlyMarker !== 'true' && testOnlyMarker !== 'false') return { error: 'DEVFLOW_TEST_ONLY must be true or false' };
-  return { workPackageId, taskContractId, proofId, testOnly: testOnlyMarker === 'true', architectureFit: { change: change as 'CREATE' | 'EXTEND' | 'NONE', ...(proposed ? { proposed_top_level_abstraction: proposed } : {}) } };
+  return {
+    workPackageId,
+    taskContractId,
+    proofId,
+    testOnly: testOnlyMarker === 'true',
+    architectureFit: {
+      change: change as 'CREATE' | 'EXTEND' | 'NONE',
+      ...(proposed ? { proposed_top_level_abstraction: proposed } : {}),
+    },
+  };
 }
 
-const noReconciliation = (reason: string, state_target: 'canonical' | 'e2e' = 'canonical'): AdapterOutput => ({ kind: 'NO_RECONCILIATION', state_target, reason });
+const noReconciliation = (reason: string, state_target: 'canonical' | 'e2e' = 'canonical'): AdapterOutput => ({
+  kind: 'NO_RECONCILIATION',
+  state_target,
+  reason,
+});
 
 function prEvent(event: JsonObject): AdapterOutput {
   const pr = event.pull_request as JsonObject | undefined;
@@ -77,7 +93,12 @@ function prEvent(event: JsonObject): AdapterOutput {
       work_package_id: parsed.workPackageId,
       claim: { status: 'COMPLETE' },
       ...(parsed.architectureFit ? { architecture_fit: parsed.architectureFit } : {}),
-      validation_facts: [{ type: 'github-pr-merged', proof_id: parsed.proofId, passed: true, evidence_refs: [`github-pr:${number}`, `git:${mergeSha}`] }],
+      validation_facts: [{
+        type: 'github-pr-merged',
+        proof_id: parsed.proofId,
+        passed: true,
+        evidence_refs: [`github-pr:${number}`, `git:${mergeSha}`],
+      }],
     },
   };
 }
@@ -89,32 +110,51 @@ function workflowRun(event: JsonObject): AdapterOutput {
   const pr = event.devflow_pr as JsonObject | undefined;
   const parsed = metadata(text(pr?.body) ?? '');
   if ('error' in parsed) return noReconciliation(`associated PR: ${parsed.error}`);
-  const wp = parsed.workPackageId;
-  const tc = parsed.taskContractId;
-  const proof = parsed.proofId;
   const sha = text(run.head_sha);
   const boundSha = text(pr?.head_sha) ?? text(pr?.merge_commit_sha);
   const id = run.id;
-  if (!pr || !sha || !boundSha || sha !== boundSha || (typeof id !== 'number' && typeof id !== 'string')) return noReconciliation('workflow run lacks matching associated PR binding', parsed.testOnly ? 'e2e' : 'canonical');
-  const testOnly = parsed.testOnly;
-  if (!testOnly && (pr.merged !== true || text(pr.base_ref) !== 'main' || text(pr.merge_commit_sha) !== sha)) return noReconciliation('canonical proof requires merged PR accepted into main');
+  if (!pr || !sha || !boundSha || sha !== boundSha || (typeof id !== 'number' && typeof id !== 'string')) {
+    return noReconciliation('workflow run lacks matching associated PR binding', parsed.testOnly ? 'e2e' : 'canonical');
+  }
+  if (!parsed.testOnly && (pr.merged !== true || text(pr.base_ref) !== 'main' || text(pr.merge_commit_sha) !== sha)) {
+    return noReconciliation('canonical proof requires merged PR accepted into main');
+  }
   return {
     kind: 'RECONCILE',
-    state_target: testOnly ? 'e2e' : 'canonical',
+    state_target: parsed.testOnly ? 'e2e' : 'canonical',
     envelope: {
       schema_version: 1,
       result_id: `github-workflow-run:${id}`,
-      task_contract_id: tc,
-      work_package_id: wp,
+      task_contract_id: parsed.taskContractId,
+      work_package_id: parsed.workPackageId,
       claim: { status: 'COMPLETE' },
       ...(parsed.architectureFit ? { architecture_fit: parsed.architectureFit } : {}),
-      validation_facts: [{ type: 'proof-validation', proof_id: proof, passed: true, evidence_refs: [`github-workflow-run:${id}`, `github-pr:${pr.number ?? 'unknown'}`, `git:${sha}`], accepted_artifact_ref: `git:${sha}` }],
+      validation_facts: [{
+        type: 'proof-validation',
+        proof_id: parsed.proofId,
+        passed: true,
+        evidence_refs: [`github-workflow-run:${id}`, `github-pr:${pr.number ?? 'unknown'}`, `git:${sha}`],
+        accepted_artifact_ref: `git:${sha}`,
+      }],
     },
   };
 }
 
 function dispatch(event: JsonObject): AdapterOutput {
   const inputs = (event.inputs ?? {}) as JsonObject;
+  const packetId = text(inputs.review_packet_id);
+  const decision = text(inputs.review_decision);
+  const testOnly = inputs.devflow_test_only === true || text(inputs.devflow_test_only) === 'true';
+  if (packetId || decision) {
+    if (!packetId || !decision || !['CONTINUE', 'CORRECTION_REQUIRED', 'TOP_LEVEL_DECISION_REQUIRED'].includes(decision)) {
+      return noReconciliation('workflow_dispatch review requires valid review_packet_id and review_decision', testOnly ? 'e2e' : 'canonical');
+    }
+    return {
+      kind: 'REVIEW',
+      state_target: testOnly ? 'e2e' : 'canonical',
+      review: { packet_id: packetId, decision: decision as ReviewDecision },
+    };
+  }
   const raw = text(inputs.result_envelope) ?? text(event.result_envelope);
   if (raw) {
     try {
@@ -125,7 +165,7 @@ function dispatch(event: JsonObject): AdapterOutput {
       return noReconciliation('invalid explicit ResultEnvelope JSON');
     }
   }
-  return noReconciliation('workflow_dispatch requires result_envelope input');
+  return noReconciliation('workflow_dispatch requires result_envelope or review input');
 }
 
 export function adaptGithubEvent(event: unknown): AdapterOutput {
