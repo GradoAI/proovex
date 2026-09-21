@@ -50,13 +50,16 @@ test('workflow dispatch supports explicit recovery envelope', () => {
 
 test('GitHub event envelope reaches reconcile and survives a fresh process', () => {
   const root = path.resolve(import.meta.dirname, '../..');
-  const stateFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'devflow-state-')), 'state.json');
-  fs.copyFileSync(path.join(root, '.grado/devflow/state.json'), stateFile);
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'devflow-state-'));
+  fs.mkdirSync(path.join(tempRoot, '.grado/devflow'), { recursive: true });
+  fs.writeFileSync(path.join(tempRoot, '.grado/devflow/stage.yaml'), execFileSync('git', ['show', 'HEAD:.grado/devflow/stage.yaml'], { cwd: root, encoding: 'utf8' }));
+  const stateFile = path.join(tempRoot, '.grado/devflow/state.json');
+  fs.writeFileSync(stateFile, execFileSync('git', ['show', 'HEAD:.grado/devflow/state.json'], { cwd: root, encoding: 'utf8' }));
   const event = adaptGithubEvent({ action: 'completed', workflow_run: { id: 99, conclusion: 'success', head_sha: '012345', pull_requests: [{ number: 8 }] }, devflow_pr: { number: 8, body, head_sha: '012345' } });
   assert.equal(event.kind, 'RECONCILE');
   if (event.kind !== 'RECONCILE') return;
   const cli = path.join(root, 'tools/devflow/devflow.ts');
-  const env = { ...process.env, DEVFLOW_STATE_FILE: stateFile };
+  const env = { ...process.env, DEVFLOW_ROOT: tempRoot, DEVFLOW_STATE_FILE: stateFile };
   execFileSync(process.execPath, [cli, 'reconcile'], { cwd: root, env, input: JSON.stringify(event.envelope), encoding: 'utf8' });
   const status = JSON.parse(execFileSync(process.execPath, [cli, 'status', '--json'], { cwd: root, env, encoding: 'utf8' })) as { exit_gate: { complete: boolean }; proof_obligations: Array<{ id: string; state: string }> };
   assert.equal(status.proof_obligations.find((proof) => proof.id === 'PVX-S1-P1')?.state, 'SATISFIED');
@@ -66,10 +69,13 @@ test('GitHub event envelope reaches reconcile and survives a fresh process', () 
 test('sequential durable events load the prior projection before reconciling', () => {
   const root = path.resolve(import.meta.dirname, '../..');
   const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'devflow-sequence-'));
-  const stateFile = path.join(stateDir, 'state.json');
-  fs.copyFileSync(path.join(root, '.grado/devflow/state.json'), stateFile);
+  const tempRoot = path.join(stateDir, 'root');
+  fs.mkdirSync(path.join(tempRoot, '.grado/devflow'), { recursive: true });
+  fs.writeFileSync(path.join(tempRoot, '.grado/devflow/stage.yaml'), execFileSync('git', ['show', 'HEAD:.grado/devflow/stage.yaml'], { cwd: root, encoding: 'utf8' }));
+  const stateFile = path.join(tempRoot, '.grado/devflow/state.json');
+  fs.writeFileSync(stateFile, execFileSync('git', ['show', 'HEAD:.grado/devflow/state.json'], { cwd: root, encoding: 'utf8' }));
   const cli = path.join(root, 'tools/devflow/devflow.ts');
-  const env = { ...process.env, DEVFLOW_STATE_FILE: stateFile };
+  const env = { ...process.env, DEVFLOW_ROOT: tempRoot, DEVFLOW_STATE_FILE: stateFile };
   const envelope = (id: string, wp: string, proof: string) => ({ schema_version: 1, result_id: id, work_package_id: wp, task_contract_id: `TC-${proof}`, claim: { status: 'COMPLETE' }, validation_facts: [{ type: 'proof-validation', proof_id: proof, passed: true, evidence_refs: [`git:${id}`] }] });
   execFileSync(process.execPath, [cli, 'reconcile'], { cwd: root, env, input: JSON.stringify(envelope('sequence-1', 'WP-PVX-S1-P2', 'PVX-S1-P2')), encoding: 'utf8' });
   execFileSync(process.execPath, [cli, 'reconcile'], { cwd: root, env, input: JSON.stringify(envelope('sequence-2', 'WP-PVX-S1-P3', 'PVX-S1-P3')), encoding: 'utf8' });
