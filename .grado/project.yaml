@@ -23,6 +23,12 @@
     "branch": "devflow/state",
     "path": ".grado/devflow/state.json"
   },
+  "planning_state_authority": {
+    "kind": "project-files",
+    "state_path": ".grado/planning/state.json",
+    "revisions_path": ".grado/planning/revisions",
+    "commit_point": "state-json-atomic-replace"
+  },
   "accepted_artifact_authority": {
     "kind": "github-merged-pr-main-with-successful-validation",
     "canonical_branch": "main",
