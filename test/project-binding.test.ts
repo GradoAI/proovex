@@ -22,6 +22,12 @@ interface ProjectBinding {
     branch: string;
     path: string;
   };
+  planning_state_authority: {
+    kind: string;
+    state_path: string;
+    revisions_path: string;
+    commit_point: string;
+  };
   accepted_artifact_authority: {
     kind: string;
     canonical_branch: string;
@@ -65,6 +71,15 @@ test("ProjectBinding matches the adopted PROJECT Bootstrap contract", () => {
   assert.equal(binding.workflow_state_authority.branch, "devflow/state");
   assert.equal(binding.workflow_state_authority.path, ".grado/devflow/state.json");
   assert.equal(fs.existsSync(path.join(root, binding.workflow_state_authority.stage_spec_path)), true);
+
+  assert.deepEqual(binding.planning_state_authority, {
+    kind: "project-files",
+    state_path: ".grado/planning/state.json",
+    revisions_path: ".grado/planning/revisions",
+    commit_point: "state-json-atomic-replace",
+  });
+  assert.notEqual(binding.planning_state_authority.state_path, binding.workflow_state_authority.path);
+  assert.notEqual(binding.planning_state_authority.revisions_path, path.dirname(binding.workflow_state_authority.path));
 
   assert.equal(
     binding.accepted_artifact_authority.kind,
