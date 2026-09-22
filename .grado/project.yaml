@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "project_id": "proovex",
+  "repository": "GradoAI/proovex",
+  "normative_bindings": {
+    "workflow_contract": {
+      "repository": "GradoAI/ChatGPT-doc",
+      "path": "docs/project-bootstrap-contract.md",
+      "baseline": "GradoAI/ChatGPT-doc@99753a2c322287b5adc410adf6147612a098e55a"
+    },
+    "project_design": {
+      "repository": "GradoAI/ChatGPT-doc",
+      "path": "docs/proovex-top-level-design.md",
+      "baseline": "GradoAI/ChatGPT-doc@910e291fa0ac2a312629c2dd5f5dddfec2227950"
+    }
+  },
+  "engineering_authority": {
+    "canonical_branch": "main"
+  },
+  "workflow_state_authority": {
+    "stage_spec_path": ".grado/devflow/stage.yaml",
+    "kind": "git-branch-file",
+    "branch": "devflow/state",
+    "path": ".grado/devflow/state.json"
+  },
+  "accepted_artifact_authority": {
+    "kind": "github-merged-pr-main-with-successful-validation",
+    "canonical_branch": "main",
+    "validation_workflow": ".github/workflows/ci.yml",
+    "reconciliation_adapter": "tools/devflow/github-event.ts"
+  },
+  "relay": {
+    "interface": "relay-project-contract-v1",
+    "binding_status": "UNBOUND"
+  }
+}
