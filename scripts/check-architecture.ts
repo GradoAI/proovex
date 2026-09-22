@@ -93,6 +93,7 @@ function classify(
   if (file.startsWith('architecture/fixtures/')) return 'fixture';
   if (/^(package\.json|package-lock\.json|tsconfig\.json|biome\.json|\.nvmrc|\.gitignore)$/.test(file))
     return 'config';
+  if (/^\.grado\/project\.yaml$/.test(file)) return 'config';
   if (/^\.grado\/devflow\/.+\.(yaml|json|md)$/.test(file)) return 'config';
   if (/^(packages|apps)\/[^/]+\/package\.json$/.test(file)) return 'config';
   if (/^architecture\/[^/]+\.json$/.test(file)) return 'config';
