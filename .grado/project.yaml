@@ -28,7 +28,10 @@
     "branch": "devflow/state",
     "state_path": ".grado/planning/state.json",
     "revisions_path": ".grado/planning/revisions",
-    "commit_point": "git-ref-compare-and-swap"
+    "commit_point": "git-ref-compare-and-swap",
+    "canonical_remote": {
+      "url": "https://github.com/GradoAI/proovex.git"
+    }
   },
   "accepted_artifact_authority": {
     "kind": "github-merged-pr-main-with-successful-validation",

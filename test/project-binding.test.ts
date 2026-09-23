@@ -28,6 +28,7 @@ interface ProjectBinding {
     state_path: string;
     revisions_path: string;
     commit_point: string;
+    canonical_remote: { url: string };
   };
   accepted_artifact_authority: {
     kind: string;
@@ -79,6 +80,9 @@ test("ProjectBinding matches the adopted PROJECT Bootstrap contract", () => {
     state_path: ".grado/planning/state.json",
     revisions_path: ".grado/planning/revisions",
     commit_point: "git-ref-compare-and-swap",
+    canonical_remote: {
+      url: "https://github.com/GradoAI/proovex.git",
+    },
   });
   assert.equal(
     binding.planning_state_authority.branch,
