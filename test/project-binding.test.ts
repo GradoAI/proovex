@@ -24,9 +24,11 @@ interface ProjectBinding {
   };
   planning_state_authority: {
     kind: string;
+    branch: string;
     state_path: string;
     revisions_path: string;
     commit_point: string;
+    canonical_remote: { url: string };
   };
   accepted_artifact_authority: {
     kind: string;
@@ -73,11 +75,19 @@ test("ProjectBinding matches the adopted PROJECT Bootstrap contract", () => {
   assert.equal(fs.existsSync(path.join(root, binding.workflow_state_authority.stage_spec_path)), true);
 
   assert.deepEqual(binding.planning_state_authority, {
-    kind: "project-files",
+    kind: "git-branch-files",
+    branch: "devflow/state",
     state_path: ".grado/planning/state.json",
     revisions_path: ".grado/planning/revisions",
-    commit_point: "state-json-atomic-replace",
+    commit_point: "git-ref-compare-and-swap",
+    canonical_remote: {
+      url: "https://github.com/GradoAI/proovex.git",
+    },
   });
+  assert.equal(
+    binding.planning_state_authority.branch,
+    binding.workflow_state_authority.branch,
+  );
   assert.notEqual(binding.planning_state_authority.state_path, binding.workflow_state_authority.path);
   assert.notEqual(binding.planning_state_authority.revisions_path, path.dirname(binding.workflow_state_authority.path));
 
