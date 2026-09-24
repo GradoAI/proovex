@@ -10,6 +10,8 @@ Capture real agent actions, observe their effects, and independently verify what
 
 **Status: Early productization / incubation. A standalone implementation is not yet available.**
 
+Chinese product name: 谱维斯. The project ID `proovex`, the repository `GradoAI/proovex`, package / protocol names and Stage / Proof / Work IDs are unchanged.
+
 ![Proovex — Agent Action → Evidence → Verification → Trusted Outcome](./assets/proovex-hero.svg)
 
 ## What is Proovex
@@ -86,9 +88,52 @@ These are planned experiences, not currently available features:
 - Verifiable by default
 - Evidence over self-report
 
+## Product shape
+
+This section projects the accepted Proovex Product Reality ([ChatGPT-doc `docs/proovex-product-reality-prd.md`](https://github.com/GradoAI/ChatGPT-doc/blob/main/docs/proovex-product-reality-prd.md) §5.2). This README is a projection, not an authority: it does not define Stages, Proofs, requirements, backlog, tasks, issues, API contracts or implementation commitments.
+
+| Layer | What it covers |
+|---|---|
+| **PROVE** | Claim, Evidence Set, Verification Contract, Verification Result, missing Evidence / unknown |
+| **INSPECT** | Run, Observation, Evidence, provenance, artifact / subject binding, explanation / audit history |
+| **CONNECT** | Agent runtimes, Relay, Git / CI, MCP, source adapters / producers, external evidence producers |
+
+PROVE / INSPECT / CONNECT is one Evidence Runtime's product taxonomy, not three runtimes, Evidence models, authorities or backlogs.
+
+Two productization principles:
+
+> **One Evidence Plane → Many Projections**
+
+> **Put verifiable evidence where claims and decisions happen.**
+
+Every surface shares one Observation, Evidence, Claim, Verification Contract and Verification Result model; no surface may create a second Evidence truth. Proovex puts evidence where decisions happen, but it does not become workflow authority, and a Relay operational / reconciliation fact is not a Proovex Verification.
+
+**Task-shaped verification.** Future surfaces should answer questions such as: Did this claim actually happen? What Evidence supports it? What contradicts it? What Evidence is missing? Which artifact / subject does the result bind to? Why is the result `VERIFIED`, `CONTRADICTED` or `INSUFFICIENT_EVIDENCE`? Which Source Facts were used? These are examples only, not an API contract or a backlog.
+
+**Deterministic result, optional narrative.** A Verification Result is a deterministic, contract-bound product fact. A human-facing explanation is an optional projection over Evidence and provenance, and it can never change the result.
+
+**Missing and stale must stay visible.** Source time, Observation freshness, Evidence coverage, missing Evidence and `INSUFFICIENT_EVIDENCE` must remain visible on future surfaces. This is not a new certainty or scoring engine.
+
+**First Verified Run is the intended Quick Start.** One real Source Fact → one explicit Claim → one concrete Evidence Set → one deterministic Verification Result → one inspectable provenance chain. This reuses the existing Stage-1 proof work and adds no new Stage work. It does not exist yet.
+
+**Possible surfaces, none available today:**
+
+- **Agent Verification Surface** — future; no SDK, CLI or API.
+- **Human Audit Surface** — future; no runnable audit / query.
+- **CI / Gate Surface** — future as a surface; CI results may already serve as Source Facts.
+- **Workspace / Estate Surface** — future enterprise surface.
+
+**Outside Proovex Core.** Repository intelligence (code graph, code health, dead code, wiki, risk scoring, git archaeology, refactoring) does not define Evidence Runtime semantics. Such systems may connect as sources, producers, evidence sources, consumers or adapters.
+
 ## Current Status
 
 **Early productization. You cannot try a standalone runtime yet.** This repository contains the product definition and roadmap, with no runnable SDK, CLI, API, or Quick Start.
+
+Current reality (from the accepted Product Reality):
+
+- Product availability: **INCUBATION**. The standalone Evidence Runtime is not available.
+- `PVX-STAGE-1 — Prove Evidence` is **ACTIVE**; `PVX-S1-P1..P5` are all **UNPROVEN**; `WP-PVX-S1-P1..P5` are **READY**. First Real Producer, First Verified Run and False Claim Detection are not yet implemented or proven.
+- The repository contains foundation / kernel packages only. The private `proovex foundation info --json` probe is not a product CLI.
 
 Proovex was incubated from evidence, trust, verification and evaluation capabilities developed in grado-companion-kit.
 

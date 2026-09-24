@@ -1,4 +1,4 @@
-# Proovex
+# Proovex（谱维斯）
 
 [English](./README.md) | 简体中文
 
@@ -9,6 +9,8 @@ Proovex 是一个开放、可插拔、面向 AI Agent 的 Evidence Runtime。
 捕获 Agent 的真实操作，观察其产生的影响，并独立验证实际发生了什么。
 
 **当前状态：早期产品化 / 孵化阶段。独立实现尚不可用。**
+
+“谱维斯”是面向人的中文产品名；工程 ProjectIdentity、仓库、package / protocol、Stage / Proof / Work ID 仍保持 `proovex` / Proovex。
 
 ![Proovex — Agent Action → Evidence → Verification → Trusted Outcome](./assets/proovex-hero.svg)
 
@@ -86,9 +88,52 @@ Capture → Normalize → Store → Verify → Query
 - 默认可验证
 - Evidence 优先于自我报告
 
+## 产品形态
+
+本节是已接受的 Proovex Product Reality（[ChatGPT-doc `docs/proovex-product-reality-prd.md`](https://github.com/GradoAI/ChatGPT-doc/blob/main/docs/proovex-product-reality-prd.md) §5.2）的投影。README 只是投影，不是 authority：它不定义 Stage、Proof、requirement、backlog、Task、Issue、API contract 或实现承诺。
+
+| 产品层 | 涵盖内容 |
+|---|---|
+| **PROVE** | Claim、Evidence Set、Verification Contract、Verification Result、缺失的 Evidence / 未知 |
+| **INSPECT** | Run、Observation、Evidence、provenance、artifact / subject binding、解释 / 审计历史 |
+| **CONNECT** | Agent runtimes、Relay、Git / CI、MCP、source adapters / producers、外部 evidence producers |
+
+PROVE / INSPECT / CONNECT 是同一个 Evidence Runtime 的产品 taxonomy，不是三套 runtime、Evidence model、authority 或 backlog。
+
+两条产品化原则：
+
+> **One Evidence Plane → Many Projections**
+
+> **Put verifiable evidence where claims and decisions happen.**
+
+所有入口共享同一套 Observation、Evidence、Claim、Verification Contract 与 Verification Result，任何入口都不能创造第二份 Evidence truth。Proovex 把 Evidence 放到决策发生的地方，但不因此成为 workflow authority；Relay 的运行 / 对账事实也不等于 Proovex Verification。
+
+**Task-shaped verification。** 未来的入口应回答这样的问题：这个 claim 是否真的发生？哪些 Evidence 支持它？哪些反驳它？缺哪些 Evidence？结果绑定到哪个 artifact / subject？为什么是 `VERIFIED`、`CONTRADICTED` 或 `INSUFFICIENT_EVIDENCE`？用了哪些 Source Facts？这些只是示例，不是 API contract，也不是 backlog。
+
+**确定性结果，可选叙述。** Verification Result 是确定性的、受 contract 约束的产品事实；面向人的解释只是建立在 Evidence 与 provenance 之上的可选投影，永远不能改变结果。
+
+**缺失与过时必须可见。** 未来的入口必须显示 source 时间、Observation 新鲜度、Evidence 覆盖、缺失的 Evidence 和 `INSUFFICIENT_EVIDENCE`。这不是新的确定性或评分引擎。
+
+**First Verified Run 是预期的 Quick Start。** 一个真实 Source Fact → 一个明确 Claim → 一个具体 Evidence Set → 一个确定性 Verification Result → 一条可检查的 provenance 链。它复用现有 Stage-1 的 proof 工作，不新增 Stage 工作，目前尚不存在。
+
+**可能的产品入口（目前都不可用）：**
+
+- **Agent Verification Surface**：未来入口；没有 SDK、CLI 或 API。
+- **Human Audit Surface**：未来入口；没有可运行的审计 / 查询。
+- **CI / Gate Surface**：作为入口是未来的；CI 结果已可作为 Source Fact。
+- **Workspace / Estate Surface**：未来的企业入口。
+
+**不属于 Proovex Core。** Repository intelligence（代码图谱、代码健康、dead code、wiki、风险评分、git archaeology、重构）不定义 Evidence Runtime 语义；这类系统可以作为 source、producer、evidence 来源、consumer 或 adapter 接入。
+
 ## 当前状态
 
 **早期产品化。现在还不能试用独立运行时。** 本仓库提供产品定义与路线图，尚无可运行的 SDK、CLI、API 或 Quick Start。
+
+当前现实（来自已接受的 Product Reality）：
+
+- 产品可用性：**INCUBATION**，独立的 Evidence Runtime 尚不可用。
+- `PVX-STAGE-1 — Prove Evidence` 为 **ACTIVE**；`PVX-S1-P1..P5` 全部 **UNPROVEN**；`WP-PVX-S1-P1..P5` 为 **READY**。First Real Producer、First Verified Run 与 False Claim Detection 尚未实现或证明。
+- 仓库目前只有 foundation / kernel 包；private 的 `proovex foundation info --json` 探针不是产品 CLI。
 
 Proovex 的 Evidence、信任、Verification 和评估能力最初在 grado-companion-kit 中开发、孵化和验证。
 
